@@ -63,6 +63,4 @@ All 10 roles live in `roles/`. The install script picks everything up automatica
 
 `enable_asr` and `enable_mdi_gpo` are derived from [@curi0usJack](https://github.com/curi0usJack)'s original work at [curi0usJack/Ludus-MDE-MDI-Roles](https://github.com/curi0usJack/Ludus-MDE-MDI-Roles). This repo builds on those foundations, restructures them into a unified DC↔WKS setup, and adds the ADCS misconfiguration layer, MDE prerequisites hardening, WEF pipeline, and additional roles.
 
-## Licence
-
-Licensed for personal use — ZephrSec Ltd.
+- AD CS lab is a [snippet from my course](https://lms.zsec.red)
