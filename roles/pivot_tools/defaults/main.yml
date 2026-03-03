@@ -1,0 +1,39 @@
+---
+# Created by @ZephrFish 
+# https://zephrsec.com | https://blog.zsec.uk
+# Default variables for pivot_tools
+
+# Chisel version to download (must match a GitHub release tag)
+chisel_version: "1.9.1"
+
+# Ligolo-ng version to download (must match a GitHub release tag)
+ligolo_version: "0.6.2"
+
+# Pre-staged binary paths (optional) — set these to skip GitHub downloads.
+# Use scripts/pre-download-tools.sh to download binaries to your local machine first.
+# Example:
+#   chisel_local_binary: /home/user/staged-tools/chisel_1.9.1_linux_amd64.gz
+#   ligolo_local_binary: /home/user/staged-tools/ligolo-ng_proxy_0.6.2_linux_amd64.tar.gz
+chisel_local_binary: ""
+ligolo_local_binary: ""
+
+# Enable SOCKS server on this host
+socks_server: false
+
+# SOCKS proxy port
+socks_port: 1080
+
+# Install offensive security tools (impacket, netexec, certipy, etc.)
+# Set to true on attack boxes, false on pivot hosts
+install_attack_tools: false
+
+# Domain for attack tool configs
+zsec_domain: "zsec.local"
+
+# Pivot users to create for SSH access
+# Format:
+#   pivot_users:
+#     - username: "pivotuser"
+#       password: "P!v0tUs3r2026"
+#       ssh_enabled: true
+pivot_users: []

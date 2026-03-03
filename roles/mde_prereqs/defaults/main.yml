@@ -1,0 +1,179 @@
+---
+# Created by @ZephrFish 
+# https://zephrsec.com | https://blog.zsec.uk
+# mde_prereqs defaults
+
+# ── Power Plan ────────────────────────────────────────────────────────────────
+# High Performance power plan — recommended for DCs running MDI sensor.
+# Default true (set false per-host in role_vars for workstations).
+mde_enable_high_performance_power_plan: true
+
+# ── Windows Defender Cloud Protection ─────────────────────────────────────────
+mde_enable_cloud_protection: true
+mde_cloud_block_level: High   # Default | Moderate | High | HighPlus | ZeroTolerance
+# NeverSend: no file samples uploaded to Microsoft (suitable for labs with offensive tools)
+# SendSafeSamples: upload only safe/signed samples (balanced)
+# SendAllSamples: upload everything (not suitable for offensive tooling labs)
+mde_submit_samples_consent: NeverSend
+
+# ── Network Protection ─────────────────────────────────────────────────────────
+mde_enable_network_protection: true
+mde_network_protection_mode: Enabled   # Enabled | AuditMode | Disabled
+
+# ── TLS 1.2 ───────────────────────────────────────────────────────────────────
+mde_enforce_tls12: true
+
+# ── PowerShell Logging ────────────────────────────────────────────────────────
+mde_enable_ps_scriptblock_logging: true
+mde_enable_ps_module_logging: true
+mde_enable_ps_transcription: true
+mde_ps_transcription_path: "C:\\PSTranscripts"
+
+# ── Classic Event Log Sizing ──────────────────────────────────────────────────
+mde_security_log_size_mb: 1024
+mde_system_log_size_mb: 512
+mde_application_log_size_mb: 512
+
+# ── Process Creation Command Line (Event 4688) ────────────────────────────────
+mde_enable_process_cmdline_audit: true
+
+# ── Windows Telemetry Level ───────────────────────────────────────────────────
+# 0=Off (breaks MDE), 1=Basic, 2=Enhanced (recommended), 3=Full
+# DiagTrack is stopped by policy at level 0 — MDE onboarding will fail or degrade.
+mde_set_telemetry_level: true
+mde_telemetry_level: 2
+
+# ── DiagTrack Service ─────────────────────────────────────────────────────────
+# Connected User Experiences and Telemetry — must be running before MDE onboards.
+mde_ensure_diagtrack: true
+
+# ── PUA Protection ────────────────────────────────────────────────────────────
+# Catches riskware, dual-use tools, and adware. Separate from ASR rules.
+# Generates Event 1160 in the Defender/Operational log.
+mde_enable_pua_protection: true
+
+# ── Controlled Folder Access ──────────────────────────────────────────────────
+# AuditMode: fires Event 1123 (what would be blocked) without actually blocking.
+# Use AuditMode in lab to avoid disrupting tooling. Set to Enabled post-testing.
+mde_set_controlled_folder_access: true
+mde_controlled_folder_access: AuditMode   # AuditMode | Enabled | Disabled
+
+# ── System-Level Exploit Protection ──────────────────────────────────────────
+# Applies ASLR force-randomisation, SEHOP, and heap-termination-on-error
+# system-wide via an XML policy (Set-ProcessMitigation -PolicyFilePath).
+mde_enable_exploit_protection: true
+
+# ── Windows Defender Firewall ─────────────────────────────────────────────────
+# All three profiles must be enabled for MDE network detections to function.
+mde_enable_firewall: true
+
+# ── DisableAntiSpyware Remediation ────────────────────────────────────────────
+# If HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\DisableAntiSpyware = 1,
+# Defender is silently disabled and MDE onboarding fails. Corrects it to 0.
+mde_fix_disable_antispyware: true
+
+# ── Additional Event Log Channels ─────────────────────────────────────────────
+# Enables and sizes channels that are disabled or undersized by default.
+mde_enable_additional_log_channels: true
+mde_defender_log_size_mb: 64      # Microsoft-Windows-Windows Defender/Operational (default 1 MB)
+mde_ps_operational_log_size_mb: 128  # Microsoft-Windows-PowerShell/Operational (default 15 MB)
+mde_wmi_log_size_mb: 64           # Microsoft-Windows-WMI-Activity/Operational (disabled by default)
+mde_task_log_size_mb: 64          # Microsoft-Windows-TaskScheduler/Operational (default 4 MB)
+mde_dns_log_size_mb: 32           # Microsoft-Windows-DNS-Client/Operational (disabled by default)
+
+# ── Advanced Audit Policy ─────────────────────────────────────────────────────
+# Sets SCENoApplyLegacyAuditPolicy and configures 18 auditpol subcategories.
+# MDI-required (https://aka.ms/mdi/advancedaudit):
+#   Credential Validation, Computer/Distribution/Security Group/User Account
+#   Management, Directory Service Changes, Directory Service Access,
+#   Security System Extension
+# Additional coverage: Process Creation, Logon, Removable Storage, IPsec Driver,
+#   Security State Change, System Integrity, Logoff, Filtering Platform
+#   Connection, SAM, Filtering Platform Policy Change
+mde_enable_advanced_audit_policy: true
+
+# ── NTLM Auditing (DC only) ───────────────────────────────────────────────────
+# Enables Event 8004 for MDI NTLM enrichment. DC-only — set false on workstations.
+# Sets RestrictSendingNTLMTraffic=1, AuditNTLMInDomain=7, AuditReceivingNTLMTraffic=2
+mde_enable_ntlm_auditing: false
+
+# ── ADCS CA Auditing (CA server only) ────────────────────────────────────────
+# Runs certutil -setreg CA\AuditFilter 127 and restarts certsvc.
+# Only enable on hosts running Certificate Authority role.
+mde_enable_adcs_ca_auditing: false
+
+# ── Security Intelligence Update ──────────────────────────────────────────────
+# Triggers Update-MpSignature pre-onboarding so initial scans run against
+# current definitions rather than stale base-image signatures.
+mde_update_signatures: true
+
+# ── Defender Service Health ────────────────────────────────────────────────────
+# Ensures WinDefend and WdNisSvc are Running/Automatic before MDE onboarding.
+# If either is Disabled the MDE sensor installation fails.
+mde_verify_defender_services: true
+
+# ── Windows Health Reporting Services ─────────────────────────────────────────
+# wscsvc, SecurityHealthService, EventLog, W32Time.
+# W32Time is the MDI 5-minute Kerberos time-skew requirement.
+mde_ensure_health_services: true
+
+# ── SAM Remote Access (MDI NTLM/RPC Name Resolution) ─────────────────────────
+# RestrictRemoteSAM controls which accounts can call SAM APIs on this host
+# remotely. MDI sensor (running as SYSTEM/NetworkService on the DC) needs RC
+# (read-control) access to enumerate SAM on member servers for NTLM/RPC-based
+# name resolution. Without this, MDI raises the "Low success rate of active
+# name resolution" health alert.
+# SDDL: O:SYG:SYD:(A;;RC;;;BA)(A;;RC;;;NS)(A;;RC;;;SY)
+#   BA = Builtin\Administrators  NS = NT AUTHORITY\NetworkService
+#   SY = NT AUTHORITY\SYSTEM
+mde_configure_restrict_remote_sam: true
+mde_restrict_remote_sam_sddl: "O:SYG:SYD:(A;;RC;;;BA)(A;;RC;;;NS)(A;;RC;;;SY)"
+
+# ── LDAP Diagnostic Logging (Event 1644, DC-only) ─────────────────────────────
+# Field Engineering level 5 on the DC enables Event 1644 (LDAP Query) logging
+# whenever a query exceeds the Expensive/Inefficient LDAP search thresholds
+# (default 10,000 entries visited / 1,000 returned). MDI ingests these events
+# to detect LDAP-based recon (T1069, T1018). DC-only — default false.
+mde_enable_ldap_diagnostic_logging: false
+mde_ldap_diagnostic_level: 5
+
+# ── MDE Pre-Onboarding Readiness Check ────────────────────────────────────────
+# Runs Get-MpComputerStatus and logs key health fields before onboarding.
+# Not a hard assertion (ignore_errors) — provides a baseline for troubleshooting.
+mde_run_readiness_check: true
+
+# ── Firewall Blocked Connection Logging ───────────────────────────────────────
+# Logs dropped packets to pfirewall.log for all three profiles.
+# MDE ingests firewall drop events via ETW. Max 32767 KB (~32 MB) per profile.
+mde_enable_firewall_logging: true
+mde_firewall_log_size_kb: 32767
+
+# ── LSA Credential Hardening ──────────────────────────────────────────────────
+# RunAsPPL=1         — LSA Protected Process Light. Requires reboot to activate.
+# LmCompatibilityLevel=5 — Refuse LM and NTLMv1; accept NTLMv2 only.
+# UseLogonCredential=0 — Disable WDigest plain-text credential caching.
+# DisableRestrictedAdmin=0 — Enable Restricted Admin RDP (no creds forwarded).
+mde_enable_lsa_hardening: true
+mde_lsa_run_as_ppl: 1
+mde_lm_compat_level: 5
+mde_wdigest_use_logon_cred: 0
+mde_disable_restricted_admin: 0
+
+# ── Defender Scanning Fidelity ─────────────────────────────────────────────────
+# EnableFileHashComputation: SHA256 hash in every MDE event for IoC matching.
+# Email/removable drive scanning: false = scanning enabled (disable = false).
+# SignatureUpdateInterval: 1 = check for definition updates every hour.
+mde_configure_scanning_fidelity: true
+mde_enable_file_hash_computation: true
+mde_disable_email_scanning: false
+mde_disable_removable_drive_scanning: false
+mde_signature_update_interval: 1
+
+# ── Extended Audit Subcategories and DC-Specific Log Channels ─────────────────
+# Extended subcategories: DPAPI Activity, Detailed File Share, Token Right Adjusted,
+#   Sensitive Privilege Use, Plug and Play, Group Membership.
+# DC log channels: Directory Service and NTLM/Operational — DC-only, default false.
+mde_enable_extended_audit_subcategories: true
+mde_enable_dc_log_channels: false
+mde_ds_log_size_mb: 256
+mde_ntlm_op_log_size_mb: 64

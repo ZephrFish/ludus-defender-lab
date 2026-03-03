@@ -1,0 +1,16 @@
+---
+# Created by @ZephrFish 
+# https://zephrsec.com | https://blog.zsec.uk
+# wef defaults
+
+# WEF mode: 'collector' or 'forwarder'
+wef_mode: forwarder
+
+# WEF collector server (used when mode is forwarder)
+wef_collector_server: DC01.zsec.local
+
+# Force reconfiguration
+wef_force_reconfigure: false
+
+# Create GPO for automatic enrollment (collector only)
+wef_create_gpo: false

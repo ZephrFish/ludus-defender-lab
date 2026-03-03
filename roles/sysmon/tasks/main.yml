@@ -1,0 +1,164 @@
+---
+# Created by @ZephrFish 
+# https://zephrsec.com | https://blog.zsec.uk
+# sysmon - Deploy Sysmon with attack detection configuration
+# Target: Windows hosts (DC01, WKS01)
+
+- name: Assert required variables are defined
+  ansible.builtin.assert:
+    that:
+      - ansible_host is defined
+      - inventory_hostname is defined
+      - sysmon_install_dir is defined
+    fail_msg: "Required Ansible variables are not defined — ensure sysmon_install_dir is set and the deploy script is present"
+    success_msg: "Pre-flight variable check passed"
+
+- name: Check if Sysmon already installed
+  ansible.windows.win_service_info:
+    name: Sysmon64
+  register: sysmon_installed
+  failed_when: false
+  changed_when: false
+
+- name: Set sysmon_already_installed fact
+  ansible.builtin.set_fact:
+    sysmon_already_installed: "{{ sysmon_installed.services | default([]) | length > 0 and not sysmon_force_reinstall | default(false) }}"
+
+- name: Create Sysmon directory
+  ansible.windows.win_file:
+    path: C:\Tools\Sysmon
+    state: directory
+
+- name: Copy Sysmon deployment script
+  ansible.windows.win_copy:
+    src: deploy-sysmon-config.ps1
+    dest: C:\Tools\Sysmon\deploy-sysmon-config.ps1
+
+- name: Copy bundled Sysmon config
+  ansible.windows.win_copy:
+    src: sysmonconfig.xml
+    dest: C:\Tools\Sysmon\sysmonconfig.xml
+
+- name: Download and install Sysmon
+  block:
+
+    # NOTE: Sysmon is downloaded from the official Sysinternals live URL. This is a
+    # known-good version pinned for this lab by the version of the installer script.
+    # Operators should verify the download hash against the Sysinternals release page
+    # before using in production environments.
+    - name: Download Sysmon from Sysinternals
+      ansible.windows.win_get_url:
+        url: https://download.sysinternals.com/files/Sysmon.zip
+        dest: C:\Tools\Sysmon\Sysmon.zip
+      register: sysmon_download
+      retries: 3
+      delay: 10
+      when: not sysmon_already_installed
+
+    - name: Verify Sysmon download integrity
+      ansible.windows.win_stat:
+        path: "{{ sysmon_install_dir | default('C:\\Tools\\Sysmon') }}\\Sysmon.zip"
+        checksum_algorithm: sha256
+      register: sysmon_zip_stat
+      when: not sysmon_already_installed | default(false)
+
+    - name: Display Sysmon download hash
+      ansible.builtin.debug:
+        msg: "Sysmon zip SHA256: {{ sysmon_zip_stat.stat.checksum | default('unavailable') }}"
+      when: not sysmon_already_installed | default(false)
+
+    - name: Assert Sysmon zip SHA256 matches expected value
+      ansible.builtin.assert:
+        that:
+          - sysmon_zip_stat.stat.checksum | lower == sysmon_expected_sha256 | lower
+        fail_msg: >
+          Sysmon.zip SHA256 mismatch!
+          Expected : {{ sysmon_expected_sha256 | lower }}
+          Got      : {{ sysmon_zip_stat.stat.checksum | default('unavailable') | lower }}
+          The downloaded file may be corrupt or tampered with.
+          Update sysmon_expected_sha256 in defaults if you intentionally want a newer version.
+        success_msg: "Sysmon.zip SHA256 verified OK"
+      when:
+        - not sysmon_already_installed | default(false)
+        - sysmon_expected_sha256 | default('') | length > 0
+
+    - name: Extract Sysmon
+      community.windows.win_unzip:
+        src: C:\Tools\Sysmon\Sysmon.zip
+        dest: C:\Tools\Sysmon
+        creates: C:\Tools\Sysmon\Sysmon64.exe
+      when: not sysmon_already_installed
+
+    - name: Run Sysmon deployment script
+      ansible.windows.win_powershell:
+        script: |
+          Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+          & C:\Tools\Sysmon\deploy-sysmon-config.ps1 -Force
+      register: sysmon_result
+      changed_when: true
+      when: not sysmon_already_installed
+
+    - name: Verify Sysmon service is running
+      ansible.windows.win_service:
+        name: Sysmon64
+        state: started
+      register: sysmon_service
+      ignore_errors: true
+
+  rescue:
+    - name: Log Sysmon deployment failure
+      ansible.windows.win_powershell:
+        script: Add-Content -Path 'C:\Windows\Temp\zsec-ansible.log' -Value "FAILED sysmon {{ ansible_date_time.date | default('unknown') }} on {{ inventory_hostname }}" -ErrorAction SilentlyContinue
+      ignore_errors: true
+
+    - name: Capture Windows event log on failure
+      ansible.windows.win_powershell:
+        script: |
+          try {
+            Get-WinEvent -LogName System -Newest 10 | Format-List | Out-String
+          } catch {
+            "Unable to retrieve WinEvent log: $_"
+          }
+      register: win_event_log
+      ignore_errors: true
+      changed_when: false
+
+    - name: Show event log
+      ansible.builtin.debug:
+        msg: "{{ win_event_log.output | default(['No logs available']) }}"
+
+    - name: Capture Sysmon service state on failure
+      ansible.windows.win_powershell:
+        script: "Get-Service Sysmon64 -ErrorAction SilentlyContinue | Format-List"
+      register: sysmon_failure_status
+      ignore_errors: true
+      changed_when: false
+
+    - name: Show Sysmon service state
+      ansible.builtin.debug:
+        msg: "{{ sysmon_failure_status.output | default(['Sysmon64 service not found or not installed']) }}"
+
+    - name: Fail with clear message
+      ansible.builtin.fail:
+        msg: "Sysmon deployment FAILED on {{ inventory_hostname }}"
+
+- name: Display Sysmon status
+  ansible.builtin.debug:
+    msg: "Sysmon service status: {{ sysmon_service.state | default('unknown') }}"
+
+- name: Show Sysmon deployment status
+  ansible.builtin.debug:
+    msg:
+      - "════════════════════════════════════════════"
+      - "  sysmon — Deployment Complete"
+      - "════════════════════════════════════════════"
+      - "  Service   : Sysmon64"
+      - "  Config    : {{ sysmon_install_dir | default('C:\\Tools\\Sysmon') }}\\sysmonconfig.xml"
+      - "  Log       : Event Viewer > Applications and Services > Microsoft > Windows > Sysmon/Operational"
+      - "  Events    : Process Create (1), Network Connect (3), File Create (11)"
+      - "════════════════════════════════════════════"
+
+- name: Log successful deployment
+  ansible.windows.win_powershell:
+    script: Add-Content -Path 'C:\Windows\Temp\zsec-ansible.log' -Value "OK sysmon on {{ inventory_hostname }}" -ErrorAction SilentlyContinue
+  ignore_errors: true

@@ -1,0 +1,61 @@
+---
+# Created by @ZephrFish 
+# https://zephrsec.com | https://blog.zsec.uk
+# adcs_lab defaults
+# ======================
+# Configuration for ADCS ESC1-16 attack path training lab
+
+# Domain for ADCS configuration
+adcs_domain: zsec.local
+
+# CA configuration
+adcs_ca_name: ZSEC-CA
+adcs_ca_hostname: DC01.zsec.local  # DC+CA combined on single host
+
+# Force reconfiguration of templates (overwrites existing)
+adcs_force_reconfigure: false
+
+# Enable web enrollment for ESC8 NTLM relay attacks
+adcs_enable_web_enrollment: true
+
+# Configure DC registry settings for ESC9/ESC10
+# Set to true when running against domain controllers
+adcs_configure_dc_settings: false
+
+# ESC vulnerability toggles
+# NOTE: These variables are currently informational only — the deploy-adcs-esc-lab.ps1
+# script enables all ESC paths unconditionally. To selectively enable/disable ESC paths,
+# the PowerShell script would need to accept and check these flags as parameters.
+# Future work: pass -EnableESC1 ${{ adcs_enable_esc1 }} etc. to the script.
+adcs_enable_esc1: true   # Enrollee supplies SAN
+adcs_enable_esc2: true   # Any Purpose / No EKU
+adcs_enable_esc3: true   # Enrollment Agent
+adcs_enable_esc4: true   # Vulnerable Template ACLs
+adcs_enable_esc5: true   # PKI Object Access Control
+adcs_enable_esc6: true   # EDITF_ATTRIBUTESUBJECTALTNAME2
+adcs_enable_esc7: true   # Vulnerable CA ACLs
+adcs_enable_esc8: true   # Web Enrollment (NTLM relay)
+adcs_enable_esc9: true   # StrongCertificateBindingEnforcement
+adcs_enable_esc10: true  # CertificateMappingMethods
+adcs_enable_esc11: true  # IF_ENFORCEENCRYPTICERTREQUEST
+adcs_enable_esc13: true  # Issuance Policy OID Group Link
+adcs_enable_esc14: true  # Weak altSecurityIdentities
+adcs_enable_esc15: true  # Schema V1 EKConstraint bypass
+
+# Service accounts used for ESC5/ESC7 exploitation
+adcs_vuln_service_account: svc_backup
+
+# Test user for ESC14 altSecurityIdentities
+adcs_test_user: jsmith
+
+# Lab credentials (for documentation/reference only)
+adcs_lab_credentials:
+  domain_user:
+    username: jsmith
+    password: Summer2026!
+  service_account:
+    username: svc_backup
+    password: SvcBackup2026!
+  domain_admin:
+    username: domainadmin
+    password: D0main@dmin2026

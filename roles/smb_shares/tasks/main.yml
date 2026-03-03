@@ -1,0 +1,184 @@
+---
+# Created by @ZephrFish 
+# https://zephrsec.com | https://blog.zsec.uk
+# smb_shares - Configure SMB shares with planted lure credentials
+# Target: Domain Controller / File Server (e.g. DC01 in ADCS lab)
+
+# =============================================================================
+# Pre-flight assertions
+# =============================================================================
+
+- name: Assert required variables
+  ansible.builtin.assert:
+    that:
+      - domain_name is defined
+      - domain_name | length > 0
+      - ansible_host is defined
+      - inventory_hostname is defined
+    fail_msg: "Required variables not set: domain_name must be defined"
+    success_msg: "Pre-flight check passed"
+
+- name: Create SMB configuration directory
+  ansible.windows.win_file:
+    path: C:\Tools\SMB
+    state: directory
+
+- name: Copy SMB shares configuration script
+  ansible.windows.win_copy:
+    src: configure-smb-shares.ps1
+    dest: C:\Tools\SMB\configure-smb-shares.ps1
+
+- name: Check if SMB shares already configured
+  ansible.windows.win_powershell:
+    script: |
+      $shares = Get-SmbShare | Where-Object {$_.Name -like "IT*" -or $_.Name -like "HR*" -or $_.Name -like "Finance*"}
+      if ($shares.Count -gt 0) { Write-Output "CONFIGURED" } else { Write-Output "NOT_CONFIGURED" }
+  register: smb_share_check
+  changed_when: false
+  failed_when: false
+
+- name: Skip SMB share creation if already configured
+  ansible.builtin.set_fact:
+    smb_already_configured: "{{ 'CONFIGURED' in (smb_share_check.output | join('')) }}"
+
+- name: Configure SMB shares
+  block:
+
+    - name: Configure SMB shares with planted credentials
+      ansible.windows.win_powershell:
+        script: |
+          Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+          & C:\Tools\SMB\configure-smb-shares.ps1 -Force
+      register: smb_result
+      changed_when: true
+      when: not smb_already_configured | default(false)
+
+    - name: Verify Server service is running
+      ansible.windows.win_service:
+        name: LanmanServer
+        state: started
+
+    - name: List created shares
+      ansible.windows.win_powershell:
+        script: |
+          Get-SmbShare | Where-Object { $_.Name -notlike "*$" } | Select-Object Name, Path | ConvertTo-Json
+      register: smb_shares
+      changed_when: false
+
+  rescue:
+    - name: Log SMB configuration failure
+      ansible.windows.win_powershell:
+        script: |
+          Add-Content -Path 'C:\Windows\Temp\zsec-ansible.log' `
+            -Value "FAILED smb_shares {{ ansible_date_time.date | default('unknown') }} on {{ inventory_hostname }}" `
+            -ErrorAction SilentlyContinue
+      ignore_errors: true
+
+    - name: Capture Windows event log on failure
+      ansible.windows.win_powershell:
+        script: "Get-EventLog -LogName Application -Newest 20 | Format-List | Out-String"
+      register: win_event_log
+      ignore_errors: true
+
+    - name: Show event log
+      ansible.builtin.debug:
+        msg: "{{ win_event_log.output | default(['No logs available']) }}"
+
+    - name: Capture SMB share state on failure
+      ansible.windows.win_powershell:
+        script: "Get-SmbShare | Format-List"
+      register: smb_failure_shares
+      ignore_errors: true
+
+    - name: Show SMB share state
+      ansible.builtin.debug:
+        msg: "{{ smb_failure_shares.output | default(['No SMB share info available']) }}"
+
+    - name: Fail with clear message
+      ansible.builtin.fail:
+        msg: "SMB share configuration FAILED on {{ inventory_hostname }}"
+
+- name: Display SMB shares status
+  ansible.builtin.debug:
+    msg: |
+      SMB Shares Configuration Complete
+      ==================================
+      File Server: {{ inventory_hostname }}
+
+      Shares Created:
+        - IT       (IT-Admins + Administrators full)
+        - HR       (Domain Users read — intentional misconfiguration)
+        - Finance  (Domain Users read — intentional misconfiguration)
+        - Security (IT-Admins + Administrators full)
+        - Backups  (Backup-Operators change, Administrators full)
+        - Deploy   (Administrators only)
+        - Honeypot (Everyone read — filesystem auditing enabled)
+
+      Planted Credentials:
+        - C:\Shares\IT\admin-notes.txt          (DA password hint + svc_deploy ref)
+        - C:\Shares\IT\scripts\deploy.ps1       (svc_deploy / D3pl0y@utomation!)
+        - C:\Shares\IT\configs\server-config.xml (svc_sql + svc_backup passwords)
+        - C:\Shares\HR\employees.xlsx           (full employee directory)
+        - C:\Shares\Finance\budget-2026.xlsx    (financial data stub)
+        - C:\Shares\Backups\backup-job.ps1      (svc_backup / SvcBackup2026!)
+        - C:\Shares\Deploy\deploy-config.xml    (svc_deploy / D3pl0y@utomation!)
+
+- name: Save SMB shares info
+  ansible.windows.win_copy:
+    dest: "C:\\Tools\\smb-shares-info.txt"
+    content: |
+      ═══════════════════════════════════════════════════════════════
+      ZSEC SMB Shares Configuration — OPERATOR USE ONLY
+      Host: {{ inventory_hostname }}
+      ═══════════════════════════════════════════════════════════════
+
+      SHARES
+      ──────
+      \\{{ inventory_hostname }}\IT        → C:\Shares\IT       (IT-Admins + Administrators)
+      \\{{ inventory_hostname }}\HR        → C:\Shares\HR       (Domain Users read - misconfigured)
+      \\{{ inventory_hostname }}\Finance   → C:\Shares\Finance  (Domain Users read - misconfigured)
+      \\{{ inventory_hostname }}\Security  → C:\Shares\Security (IT-Admins + Administrators)
+      \\{{ inventory_hostname }}\Backups   → C:\Shares\Backups  (Backup-Operators change, Admins full)
+      \\{{ inventory_hostname }}\Deploy    → C:\Shares\Deploy   (Administrators only)
+      \\{{ inventory_hostname }}\Honeypot  → C:\Shares\Honeypot (Everyone read - audited)
+      \\{{ inventory_hostname }}\ADMIN$    → C:\Windows         (default admin share)
+      \\{{ inventory_hostname }}\C$        → C:\                (default admin share)
+
+      PLANTED CREDENTIALS
+      ───────────────────
+      C:\Shares\IT\admin-notes.txt               → Domain admin password hint (svc_deploy, old DA pass)
+      C:\Shares\IT\scripts\deploy.ps1            → svc_deploy / D3pl0y@utomation! in plaintext
+      C:\Shares\IT\configs\server-config.xml     → svc_sql (SqlService2026!) + svc_backup (SvcBackup2026!)
+      C:\Shares\IT\pki-docs\certificate-templates.txt → ADCS template reference (ESC1-ESC15)
+      C:\Shares\HR\employees.xlsx                → Full employee directory (username + dept)
+      C:\Shares\Finance\budget-2026.xlsx         → Financial data
+      C:\Shares\Backups\backup-job.ps1           → svc_backup / SvcBackup2026! in plaintext
+      C:\Shares\Deploy\deploy-config.xml         → svc_deploy / D3pl0y@utomation! in XML
+
+      ATTACK SCENARIOS
+      ────────────────
+      1. Enumerate shares:  crackmapexec smb {{ ansible_host }} -u jsmith -p 'Summer2026!' --shares
+      2. Read IT share:     smbclient //{{ ansible_host }}/IT -U 'ZSEC/jsmith%Summer2026!'
+      3. Find creds:        get admin-notes.txt, scripts/deploy.ps1, configs/server-config.xml
+      4. HR/Finance:        accessible to all Domain Users (intentional misconfiguration)
+      5. NTLM relay:        net use \\{{ ansible_host }}\Honeypot (audited — triggers alert)
+      ═══════════════════════════════════════════════════════════════
+
+- name: Show SMB shares deployment status
+  ansible.builtin.debug:
+    msg:
+      - "════════════════════════════════════════════"
+      - "  smb_shares — Deployment Complete"
+      - "════════════════════════════════════════════"
+      - "  Host     : {{ inventory_hostname }}"
+      - "  Shares   : IT, HR, Finance, Security, Backups, Deploy, Honeypot"
+      - "  Info     : C:\\Tools\\smb-shares-info.txt"
+      - "════════════════════════════════════════════"
+
+- name: Log successful deployment
+  ansible.windows.win_powershell:
+    script: |
+      Add-Content -Path 'C:\Windows\Temp\zsec-ansible.log' `
+        -Value "OK smb_shares on {{ inventory_hostname }}" `
+        -ErrorAction SilentlyContinue
+  ignore_errors: true

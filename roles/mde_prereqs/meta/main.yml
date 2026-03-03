@@ -1,0 +1,25 @@
+---
+# Created by @ZephrFish 
+# https://zephrsec.com | https://blog.zsec.uk
+galaxy_info:
+  role_name: mde_prereqs
+  author: "@ZephrFish"
+  description: Pre-stage MDE/MDI prerequisites on Windows hosts — PowerShell logging,
+    Defender cloud protection, Network Protection, TLS 1.2, event log sizing,
+    process command line auditing, and optional High Performance power plan.
+  version: "1.0.0"
+  license: MIT
+  min_ansible_version: "2.10"
+  platforms:
+    - name: Windows
+      versions:
+        - all
+
+  galaxy_tags:
+    - windows
+    - security
+    - mde
+    - defender
+    - detection
+
+dependencies: []

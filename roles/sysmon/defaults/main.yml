@@ -1,0 +1,20 @@
+---
+# Created by @ZephrFish 
+# https://zephrsec.com | https://blog.zsec.uk
+# sysmon defaults
+
+# Sysmon installation directory
+sysmon_install_dir: C:\Tools\Sysmon
+
+# Force reinstall even if already present
+sysmon_force_reinstall: false
+
+# Enable verbose logging during deployment
+sysmon_verbose: false
+
+# Expected SHA256 of Sysmon.zip (leave empty to skip verification).
+# Obtain the current hash from: https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon
+# or by running: Get-FileHash Sysmon.zip -Algorithm SHA256
+# Set this before deploying in security-sensitive environments.
+# Example: sysmon_expected_sha256: "ABC123..."
+sysmon_expected_sha256: ""

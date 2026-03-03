@@ -1,0 +1,21 @@
+---
+# Created by @ZephrFish 
+# https://zephrsec.com | https://blog.zsec.uk
+galaxy_info:
+  role_name: rsat
+  author: "@ZephrFish"
+  description: Install RSAT (Remote Server Administration Tools) on Windows domain members
+  version: "1.0.0"
+  license: MIT
+  min_ansible_version: "2.10"
+  platforms:
+    - name: Windows
+      versions:
+        - all
+
+  galaxy_tags:
+    - windows
+    - activedirectory
+    - sysadmin
+
+dependencies: []

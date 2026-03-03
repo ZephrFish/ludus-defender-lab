@@ -1,0 +1,366 @@
+---
+# Created by @ZephrFish 
+# https://zephrsec.com | https://blog.zsec.uk
+# pivot_tools - Deploy pivot and tunneling tools
+# Installs chisel, proxychains, SSH tunneling capabilities
+
+# =============================================================================
+# Pre-flight assertions
+# =============================================================================
+
+- name: Assert required variables
+  ansible.builtin.assert:
+    that:
+      - chisel_version is defined
+      - chisel_version | length > 0
+    fail_msg: "Required variable not set: chisel_version must be defined"
+    success_msg: "Pre-flight check passed"
+
+- name: Install pivot tools packages
+  ansible.builtin.apt:
+    name:
+      - proxychains4
+      - nmap
+      - netcat-openbsd
+      - socat
+      - tmux
+      - curl
+      - wget
+      - openssh-server
+    state: present
+    update_cache: true
+
+- name: Download and install chisel
+  block:
+
+    - name: Copy chisel from pre-staged local binary
+      ansible.builtin.copy:
+        src: "{{ chisel_local_binary }}"
+        dest: /tmp/chisel.gz
+        mode: '0644'
+      when: chisel_local_binary | default('') | length > 0
+      register: chisel_local_copy
+
+    - name: Download chisel binary from GitHub
+      ansible.builtin.get_url:
+        url: "https://github.com/jpillora/chisel/releases/download/v{{ chisel_version }}/chisel_{{ chisel_version }}_linux_amd64.gz"
+        dest: /tmp/chisel.gz
+        mode: '0644'
+        validate_certs: false
+      when: chisel_local_binary | default('') | length == 0
+
+    - name: Extract chisel
+      ansible.builtin.shell: |
+        gunzip -c /tmp/chisel.gz > /usr/local/bin/chisel
+        chmod +x /usr/local/bin/chisel
+      args:
+        creates: /usr/local/bin/chisel
+
+  rescue:
+    - name: Log chisel download failure
+      ansible.builtin.lineinfile:
+        path: /var/log/zsec-ansible.log
+        line: "{{ ansible_date_time.iso8601 | default('unknown') }} FAILED pivot_tools chisel download on {{ inventory_hostname }}"
+        create: true
+        mode: '0644'
+      ignore_errors: true
+
+    - name: Show chisel download error
+      ansible.builtin.debug:
+        msg:
+          - "Chisel download FAILED on {{ inventory_hostname }}"
+          - "Check that chisel_version (currently: '{{ chisel_version }}') is a valid release tag"
+          - "Valid releases: https://github.com/jpillora/chisel/releases"
+
+    - name: Fail with clear message
+      ansible.builtin.fail:
+        msg: "Chisel download FAILED on {{ inventory_hostname }} — verify chisel_version variable"
+
+- name: Configure proxychains
+  ansible.builtin.copy:
+    dest: /etc/proxychains4.conf
+    mode: '0644'
+    content: |
+      # proxychains.conf - zsec.local lab configuration
+      strict_chain
+      proxy_dns
+      remote_dns_subnet 224
+      tcp_read_time_out 15000
+      tcp_connect_time_out 8000
+
+      [ProxyList]
+      # Default SOCKS5 proxy on echo
+      socks5 127.0.0.1 {{ socks_port | default(1080) }}
+
+- name: Configure SSH for tunneling
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - { regexp: '^#?GatewayPorts', line: 'GatewayPorts yes' }
+    - { regexp: '^#?AllowTcpForwarding', line: 'AllowTcpForwarding yes' }
+    - { regexp: '^#?PermitTunnel', line: 'PermitTunnel yes' }
+  notify: restart sshd
+
+- name: Create SOCKS server systemd service (if socks_server enabled)
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/chisel-socks.service
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=Chisel SOCKS5 Server
+      After=network.target
+
+      [Service]
+      Type=simple
+      ExecStart=/usr/local/bin/chisel server --socks5 --port {{ socks_port | default(1080) }}
+      Restart=always
+      RestartSec=5
+
+      [Install]
+      WantedBy=multi-user.target
+  when: socks_server | default(false)
+
+- name: Enable and start SOCKS server
+  ansible.builtin.systemd:
+    name: chisel-socks
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: socks_server | default(false)
+
+- name: Wait for chisel SOCKS port to be available
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ socks_port | default(1080) }}"
+    timeout: 30
+  when: socks_server | default(false)
+  ignore_errors: true
+
+- name: Install passlib for password hashing
+  ansible.builtin.pip:
+    name: passlib
+    state: present
+  delegate_to: localhost
+  run_once: true
+  become: false
+  when: pivot_users | default([]) | length > 0
+  ignore_errors: true
+
+- name: Create pivot users for SSH access
+  ansible.builtin.user:
+    name: "{{ item.username }}"
+    password: "{{ item.password | password_hash('sha512') }}"
+    shell: /bin/bash
+    createhome: yes
+    state: present
+  loop: "{{ pivot_users | default([]) }}"
+  when: pivot_users | default([]) | length > 0
+
+- name: Ensure SSH password authentication is enabled for pivot users
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PasswordAuthentication'
+    line: 'PasswordAuthentication yes'
+  when: pivot_users | default([]) | length > 0
+  notify: restart sshd
+
+- name: Create pivot helper scripts
+  ansible.builtin.copy:
+    dest: /usr/local/bin/pivot-setup
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      # Pivot setup helper for zsec.local lab
+      echo "=== zsec.local Pivot Tools ==="
+      echo ""
+      echo "SOCKS Proxy (chisel server):"
+      echo "  chisel server --socks5 --port 1080"
+      echo ""
+      echo "SSH Dynamic Forward:"
+      echo "  ssh -D 1080 -N user@target"
+      echo ""
+      echo "SSH Local Forward:"
+      echo "  ssh -L 8080:internal:80 -N user@pivot"
+      echo ""
+      echo "Chisel Client (connect to server):"
+      echo "  chisel client SERVER:PORT socks"
+      echo ""
+      echo "Use proxychains:"
+      echo "  proxychains4 curl http://internal-target"
+      echo ""
+
+# ============================================================================
+# ATTACK TOOLS - Only installed when install_attack_tools: true
+# ============================================================================
+
+- name: Install Python pip and build dependencies for attack tools
+  ansible.builtin.apt:
+    name:
+      - python3-pip
+      - python3-venv
+      - python3-dev
+      - libffi-dev
+      - libssl-dev
+      - libkrb5-dev
+      - libldap2-dev
+      - libsasl2-dev
+      - build-essential
+      - smbclient
+      - ldap-utils
+      - dnsutils
+      - whois
+      - sshpass
+      - jq
+    state: present
+  when: install_attack_tools | default(false)
+
+- name: Install pipx if not present
+  ansible.builtin.apt:
+    name: pipx
+    state: present
+  when: install_attack_tools | default(false)
+
+- name: Ensure pipx path for ansible user
+  ansible.builtin.command:
+    cmd: pipx ensurepath
+  become: true
+  become_user: "{{ ansible_user | default('debian') }}"
+  changed_when: false
+  ignore_errors: true
+  when: install_attack_tools | default(false)
+
+- name: Install attack tools via pipx
+  ansible.builtin.shell: |
+    pipx install {{ item }} 2>&1 && echo "INSTALLED" || (pipx upgrade {{ item }} 2>&1; echo "UPGRADED")
+  loop:
+    - impacket
+    - ldap-shell
+    - netexec
+    - certipy-ad
+    - bloodyAD
+    - coercer
+  become: true
+  become_user: "{{ ansible_user | default('debian') }}"
+  environment:
+    PATH: "/home/{{ ansible_user | default('debian') }}/.local/bin:{{ ansible_env.PATH }}"
+  register: pipx_results
+  changed_when: "'INSTALLED' in pipx_results.stdout"
+  ignore_errors: true
+  when: install_attack_tools | default(false)
+
+- name: Copy ligolo-ng from pre-staged local binary
+  ansible.builtin.copy:
+    src: "{{ ligolo_local_binary }}"
+    dest: /tmp/ligolo-proxy.tar.gz
+    mode: '0644'
+  when: install_attack_tools | default(false) and ligolo_local_binary | default('') | length > 0
+  ignore_errors: true
+
+- name: Download ligolo-ng proxy from GitHub
+  ansible.builtin.get_url:
+    url: "https://github.com/nicocha30/ligolo-ng/releases/download/v{{ ligolo_version }}/ligolo-ng_proxy_{{ ligolo_version }}_linux_amd64.tar.gz"
+    dest: /tmp/ligolo-proxy.tar.gz
+    mode: '0644'
+    validate_certs: false
+  when: install_attack_tools | default(false) and ligolo_local_binary | default('') | length == 0
+  ignore_errors: true
+
+- name: Extract ligolo-ng proxy
+  ansible.builtin.unarchive:
+    src: /tmp/ligolo-proxy.tar.gz
+    dest: /usr/local/bin/
+    remote_src: yes
+  ignore_errors: true
+  when: install_attack_tools | default(false)
+
+- name: Install evil-winrm dependencies and tool
+  ansible.builtin.apt:
+    name:
+      - ruby
+      - ruby-dev
+    state: present
+  when: install_attack_tools | default(false)
+
+- name: Install evil-winrm gem
+  ansible.builtin.command:
+    cmd: gem install evil-winrm
+  ignore_errors: true
+  when: install_attack_tools | default(false)
+
+- name: Install AWS and Azure CLIs
+  ansible.builtin.shell: |
+    pipx install awscli
+    pipx install azure-cli
+  become: true
+  become_user: "{{ ansible_user | default('debian') }}"
+  environment:
+    PATH: "/home/{{ ansible_user | default('debian') }}/.local/bin:{{ ansible_env.PATH }}"
+  ignore_errors: true
+  when: install_attack_tools | default(false)
+
+- name: Verify chisel is executable
+  ansible.builtin.command:
+    cmd: /usr/local/bin/chisel --version
+  register: chisel_version_check
+  changed_when: false
+  failed_when: false
+
+- name: Save pivot tools info
+  ansible.builtin.copy:
+    dest: "/usr/local/bin/pivot-tools-info.txt"
+    mode: '0644'
+    content: |
+      ═══════════════════════════════════════════════════════════════
+      ZSEC Pivot Tools
+      Host: {{ inventory_hostname }} ({{ ansible_host }})
+      ═══════════════════════════════════════════════════════════════
+
+      INSTALLED TOOLS
+      ───────────────
+      chisel:        /usr/local/bin/chisel (v{{ chisel_version }})
+      proxychains:   /usr/bin/proxychains4
+      socat:         /usr/bin/socat
+
+      SOCKS5 PROXY
+      ────────────
+      Port: {{ socks_port | default('1080') }}
+      Command: chisel server --port {{ socks_port | default('1080') }} --socks5
+
+      USAGE
+      ─────
+      # Start SOCKS5 server
+      chisel server --port 1080 --socks5
+
+      # Connect client (from attacker box)
+      chisel client SERVER_IP:1080 socks
+
+      # Use with proxychains
+      proxychains4 nmap -sT TARGET_IP
+
+      ATTACK SCENARIOS
+      ────────────────
+      1. Use as pivot point into internal network
+      2. Tunnel through SOCKS5 proxy to reach isolated segments
+      3. SSH reverse tunnel for persistent access
+      ═══════════════════════════════════════════════════════════════
+
+- name: Show pivot tools deployment status
+  ansible.builtin.debug:
+    msg:
+      - "════════════════════════════════════════════"
+      - "  pivot_tools — Deployment Complete"
+      - "════════════════════════════════════════════"
+      - "  Chisel    : /usr/local/bin/chisel {{ chisel_version_check.stdout | default('installed') }}"
+      - "  SOCKS5    : port {{ socks_port | default('1080') }}"
+      - "  Info      : /usr/local/bin/pivot-tools-info.txt"
+      - "════════════════════════════════════════════"
+
+- name: Log successful deployment
+  ansible.builtin.lineinfile:
+    path: /var/log/zsec-ansible.log
+    line: "{{ ansible_date_time.iso8601 | default('unknown') }} OK pivot_tools on {{ inventory_hostname }}"
+    create: true
+    mode: '0644'
+  ignore_errors: true

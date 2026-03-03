@@ -1,0 +1,103 @@
+<Subscription xmlns="http://schemas.microsoft.com/2006/03/windows/events/subscription">
+  <SubscriptionId>ZSec-MDI-Events</SubscriptionId>
+  <SubscriptionType>SourceInitiated</SubscriptionType>
+  <Description>ZSec lab — source-initiated WEF subscription covering MDI/MDE-relevant events</Description>
+  <Enabled>true</Enabled>
+  <Uri>http://schemas.microsoft.com/wbem/wsman/1/windows/EventLog</Uri>
+
+  <!--
+    MinLatency: events forwarded within ~30 s rather than batched over minutes.
+    Suitable for lab/detection work where near-real-time visibility matters.
+  -->
+  <ConfigurationMode>MinLatency</ConfigurationMode>
+
+  <Delivery Mode="Push">
+    <Batching>
+      <MaxItems>100</MaxItems>
+      <MaxLatencyTime>30000</MaxLatencyTime>
+    </Batching>
+    <PushSettings>
+      <Heartbeat Interval="3600000"/>
+    </PushSettings>
+  </Delivery>
+
+  <!--
+    Query covers:
+      Security log     — logon/logoff, privilege use, account/group management,
+                         ADCS (4886/4887/4888), Kerberos (4768/4769/4771/4776),
+                         process creation (4688), object access (4662/4663/4670)
+      System log       — service installs (7045), service state changes (7036/7040)
+      Sysmon           — all events (rich process/network/file telemetry)
+  -->
+  <Query>
+    <![CDATA[
+      <QueryList>
+        <Query Id="0" Path="Security">
+          <Select Path="Security">
+            *[System[
+                 EventID=4624 or EventID=4625 or EventID=4627 or
+                 EventID=4648 or EventID=4649 or
+                 EventID=4656 or EventID=4657 or EventID=4658 or
+                 EventID=4660 or EventID=4661 or EventID=4662 or EventID=4663 or
+                 EventID=4670 or EventID=4672 or EventID=4673 or EventID=4674 or
+                 EventID=4688 or EventID=4689 or
+                 EventID=4698 or EventID=4699 or EventID=4700 or
+                 EventID=4701 or EventID=4702 or
+                 EventID=4719 or
+                 EventID=4720 or EventID=4722 or EventID=4723 or EventID=4724 or
+                 EventID=4725 or EventID=4726 or
+                 EventID=4728 or EventID=4729 or EventID=4730 or
+                 EventID=4732 or EventID=4733 or
+                 EventID=4735 or EventID=4737 or EventID=4738 or EventID=4740 or
+                 EventID=4741 or EventID=4742 or EventID=4743 or
+                 EventID=4756 or EventID=4757 or EventID=4758 or
+                 EventID=4764 or EventID=4767 or
+                 EventID=4768 or EventID=4769 or EventID=4770 or EventID=4771 or
+                 EventID=4772 or EventID=4776 or EventID=4777 or
+                 EventID=4778 or EventID=4779 or
+                 EventID=4798 or EventID=4799 or
+                 EventID=4886 or EventID=4887 or EventID=4888 or EventID=4889 or
+                 EventID=5136 or EventID=5137 or EventID=5138 or
+                 EventID=5139 or EventID=5141
+            ]]
+          </Select>
+        </Query>
+        <Query Id="1" Path="System">
+          <Select Path="System">
+            *[System[EventID=7036 or EventID=7040 or EventID=7045]]
+          </Select>
+        </Query>
+        <Query Id="2" Path="Microsoft-Windows-Sysmon/Operational">
+          <Select Path="Microsoft-Windows-Sysmon/Operational">*</Select>
+        </Query>
+        <Query Id="3" Path="Microsoft-Windows-PowerShell/Operational">
+          <Select Path="Microsoft-Windows-PowerShell/Operational">
+            *[System[EventID=4103 or EventID=4104 or EventID=4105 or EventID=4106]]
+          </Select>
+        </Query>
+        <Query Id="4" Path="Microsoft-Windows-Windows Defender/Operational">
+          <Select Path="Microsoft-Windows-Windows Defender/Operational">*</Select>
+        </Query>
+      </QueryList>
+    ]]>
+  </Query>
+
+  <ReadExistingEvents>false</ReadExistingEvents>
+  <TransportName>http</TransportName>
+  <ContentFormat>RenderedText</ContentFormat>
+  <Locale Language="en-US"/>
+  <LogFile>ForwardedEvents</LogFile>
+  <PublisherName>ZSec-WEF-Collector</PublisherName>
+
+  <!--
+    AllowedSourceDomainComputers SDDL:
+      O:NS          — owner: Network Service
+      G:NS          — group: Network Service
+      D:(A;;GA;;;DC) — allow Domain Controllers (DC SID)
+        (A;;GA;;;DD) — allow Domain Computers (DD SID)
+    Both groups are automatically granted GA (Generic All) so any domain-joined
+    Windows host can forward events to this collector.
+  -->
+  <AllowedSourceNonDomainComputers/>
+  <AllowedSourceDomainComputers>O:NSG:NSD:(A;;GA;;;DC)(A;;GA;;;DD)</AllowedSourceDomainComputers>
+</Subscription>

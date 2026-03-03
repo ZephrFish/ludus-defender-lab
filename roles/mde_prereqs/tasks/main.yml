@@ -1,0 +1,722 @@
+---
+# Created by @ZephrFish 
+# https://zephrsec.com | https://blog.zsec.uk
+# mde_prereqs - Pre-stage Microsoft Defender for Endpoint / Identity prerequisites
+# Target: All Windows hosts (DC01 + WKS01) prior to MDE/MDI onboarding
+
+- name: Assert required variables are defined
+  ansible.builtin.assert:
+    that:
+      - ansible_host is defined
+      - inventory_hostname is defined
+    fail_msg: "Required Ansible variables are not defined — ensure the role is targeting a Windows host"
+    success_msg: "Pre-flight variable check passed"
+
+# ── High Performance Power Plan ───────────────────────────────────────────────
+# Microsoft explicitly recommends High Performance on DCs running the MDI sensor.
+# Default true; override to false in role_vars for workstations.
+- name: Set High Performance power plan
+  ansible.windows.win_powershell:
+    script: |
+      powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
+      $plan = powercfg /getactivescheme
+      Write-Output "Active power plan: $plan"
+  when: mde_enable_high_performance_power_plan | default(true)
+  changed_when: true
+
+# ── Ensure DisableAntiSpyware is not set ──────────────────────────────────────
+# Must run early — if Defender is disabled, all subsequent Set-MpPreference calls
+# fail silently. Common in hardened builds or leftover GPO configurations.
+- name: Ensure DisableAntiSpyware registry key is not set to 1
+  ansible.windows.win_powershell:
+    script: |
+      $path = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender'
+      if (Test-Path $path) {
+        $val = Get-ItemProperty -Path $path -Name DisableAntiSpyware -ErrorAction SilentlyContinue
+        if ($null -ne $val -and $val.DisableAntiSpyware -eq 1) {
+          Set-ItemProperty -Path $path -Name DisableAntiSpyware -Value 0 -Type DWord
+          Write-Output "DisableAntiSpyware was 1 — corrected to 0"
+        } else {
+          Write-Output "DisableAntiSpyware not set or already 0 — OK"
+        }
+      } else {
+        Write-Output "Defender policy key does not exist — OK"
+      }
+  when: mde_fix_disable_antispyware | default(true)
+  changed_when: false
+
+# ── Windows Defender Service Health ───────────────────────────────────────────
+# WinDefend and WdNisSvc must be Running/Automatic before MDE onboarding.
+# If either is Disabled the sensor installation will fail.
+- name: Ensure Windows Defender services are running and set to Automatic
+  ansible.windows.win_powershell:
+    script: |
+      $services = @('WinDefend', 'WdNisSvc')
+      foreach ($svc in $services) {
+        try {
+          $s = Get-Service -Name $svc -ErrorAction Stop
+          if ($s.StartType -ne 'Automatic') {
+            Set-Service -Name $svc -StartupType Automatic
+            Write-Output "Set $svc startup to Automatic"
+          }
+          if ($s.Status -ne 'Running') {
+            Start-Service -Name $svc -ErrorAction Stop
+            Write-Output "Started $svc"
+          } else {
+            Write-Output "$svc is Running (OK)"
+          }
+        } catch {
+          Write-Warning "Could not configure service ${svc}: $_"
+        }
+      }
+  when: mde_verify_defender_services | default(true)
+  changed_when: false
+  ignore_errors: true
+
+# ── Windows Telemetry Level ───────────────────────────────────────────────────
+# AllowTelemetry = 0 stops the DiagTrack service via policy, degrading or
+# breaking MDE EDR data upload. Set to 2 (Enhanced) as a safe minimum.
+- name: Set Windows telemetry level to Enhanced (AllowTelemetry = 2)
+  ansible.windows.win_powershell:
+    script: |
+      $path = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection'
+      if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }
+      Set-ItemProperty -Path $path -Name AllowTelemetry -Value {{ mde_telemetry_level | default(2) }} -Type DWord
+      Write-Output "AllowTelemetry set to {{ mde_telemetry_level | default(2) }}"
+  when: mde_set_telemetry_level | default(true)
+  changed_when: true
+
+# ── DiagTrack Service ─────────────────────────────────────────────────────────
+# Connected User Experiences and Telemetry service — required for MDE data upload.
+# Setting telemetry level above 0 should start it, but explicitly enforce here.
+- name: Ensure DiagTrack service is Automatic and running
+  ansible.windows.win_service:
+    name: DiagTrack
+    state: started
+    start_mode: auto
+  when: mde_ensure_diagtrack | default(true)
+  ignore_errors: true
+
+# ── Windows Health Reporting Services ─────────────────────────────────────────
+# Four services required for MDE/MDI health reporting to function correctly:
+#
+#   wscsvc (Security Center) — aggregates AV/firewall/update health status and
+#     reports it to the MDE portal. If stopped, the portal shows the device as
+#     "impaired communications" even when WinDefend is running.
+#
+#   SecurityHealthService — backs the Windows Security app and feeds telemetry
+#     into the Defender portal device health view. Separate from wscsvc.
+#
+#   EventLog — prerequisite for all audit events, WEF forwarding, Sysmon, and
+#     MDI data collection. Explicit check guards against hardened base images.
+#
+#   W32Time (Windows Time) — MDI requires time skew between the DC and all
+#     monitored hosts to be within 5 minutes. Larger skew breaks Kerberos
+#     authentication and severs MDI sensor communications entirely.
+- name: Ensure Windows health reporting services are running and set to Automatic
+  ansible.windows.win_service:
+    name: "{{ item }}"
+    state: started
+    start_mode: auto
+  loop:
+    - wscsvc                # Windows Security Center
+    - SecurityHealthService # Windows Security Health Service
+    - EventLog              # Windows Event Log
+    - W32Time               # Windows Time (5-minute MDI/Kerberos requirement)
+  when: mde_ensure_health_services | default(true)
+  ignore_errors: true
+
+# ── Windows Defender Cloud Protection ─────────────────────────────────────────
+# MDE depends on cloud protection for real-time threat intelligence and blocking.
+- name: Enable Windows Defender cloud protection and real-time monitoring
+  ansible.windows.win_powershell:
+    script: |
+      Set-MpPreference `
+        -MAPSReporting Advanced `
+        -SubmitSamplesConsent {{ mde_submit_samples_consent | default('NeverSend') }} `
+        -CloudBlockLevel {{ mde_cloud_block_level | default('High') }} `
+        -CloudExtendedTimeout 50 `
+        -DisableRealtimeMonitoring $false `
+        -DisableBehaviorMonitoring $false `
+        -DisableIOAVProtection $false
+      Write-Output "Defender cloud protection configured ({{ mde_cloud_block_level | default('High') }}, samples={{ mde_submit_samples_consent | default('NeverSend') }})"
+  when: mde_enable_cloud_protection | default(true)
+  changed_when: true
+  ignore_errors: true
+
+# ── Defender Scanning Fidelity ────────────────────────────────────────────────
+# EnableFileHashComputation: enriches MDE events with SHA256 for every executable,
+#   enabling hash-based IoC matching and Advanced Hunting queries.
+# DisableEmailScanning=$false: keep email attachment scanning active (phishing/EICAR).
+# DisableRemovableDriveScanning=$false: keep USB/removable media scanning active.
+# SignatureUpdateInterval=1: check for definition updates every hour.
+- name: Configure Defender scanning fidelity (file hashing, email, removable media)
+  ansible.windows.win_powershell:
+    script: |
+      Set-MpPreference `
+        -EnableFileHashComputation     ${{ mde_enable_file_hash_computation | default(true) | bool | ternary('true', 'false') }} `
+        -DisableEmailScanning          ${{ mde_disable_email_scanning | default(false) | bool | ternary('true', 'false') }} `
+        -DisableRemovableDriveScanning ${{ mde_disable_removable_drive_scanning | default(false) | bool | ternary('true', 'false') }} `
+        -SignatureUpdateInterval       {{ mde_signature_update_interval | default(1) | int }}
+      Write-Output "Defender scanning fidelity configured"
+  when: mde_configure_scanning_fidelity | default(true)
+  changed_when: true
+  ignore_errors: true
+
+# ── Network Protection ─────────────────────────────────────────────────────────
+# Enables SmartScreen for network connections at the kernel level.
+# Fully enforced only after MDE onboards — pre-staging activates it immediately.
+- name: Enable Network Protection
+  ansible.windows.win_powershell:
+    script: |
+      Set-MpPreference -EnableNetworkProtection {{ mde_network_protection_mode | default('Enabled') }}
+      Write-Output "Network Protection: {{ mde_network_protection_mode | default('Enabled') }}"
+  when: mde_enable_network_protection | default(true)
+  changed_when: true
+  ignore_errors: true
+
+# ── PUA Protection ────────────────────────────────────────────────────────────
+# Catches riskware, dual-use tools, and adware. Separate from ASR rules.
+# Generates Event 1160 in Microsoft-Windows-Windows Defender/Operational.
+- name: Enable PUA (Potentially Unwanted Application) protection
+  ansible.windows.win_powershell:
+    script: |
+      Set-MpPreference -PUAProtection Enabled
+      Write-Output "PUA Protection enabled"
+  when: mde_enable_pua_protection | default(true)
+  changed_when: true
+  ignore_errors: true
+
+# ── Controlled Folder Access ──────────────────────────────────────────────────
+# AuditMode fires Event 1123 for every access that would have been blocked,
+# without disrupting lab tooling. Visible in MDE Advanced Hunting and the portal.
+- name: Set Controlled Folder Access to AuditMode
+  ansible.windows.win_powershell:
+    script: |
+      Set-MpPreference -EnableControlledFolderAccess {{ mde_controlled_folder_access | default('AuditMode') }}
+      Write-Output "Controlled Folder Access: {{ mde_controlled_folder_access | default('AuditMode') }}"
+  when: mde_set_controlled_folder_access | default(true)
+  changed_when: true
+  ignore_errors: true
+
+# ── System-Level Exploit Protection ──────────────────────────────────────────
+# Applies ASLR force-randomisation, SEHOP, and heap termination on error
+# system-wide. Written as an XML policy and applied via Set-ProcessMitigation.
+- name: Create exploit protection directory
+  ansible.windows.win_file:
+    path: C:\Tools\ExploitProtection
+    state: directory
+  when: mde_enable_exploit_protection | default(true)
+
+- name: Apply system-level exploit protection policy (ASLR, SEHOP, Heap)
+  ansible.windows.win_powershell:
+    script: |
+      $xmlPath = 'C:\Tools\ExploitProtection\system-ep.xml'
+      $xml = @(
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<MitigationPolicy>',
+        '  <SystemConfig>',
+        '    <ASLR ForceRelocateImages="true" RequireInfo="false" BottomUp="true" HighEntropy="true" />',
+        '    <SEHOP Enable="true" TelemetryOnly="false" />',
+        '    <Heap TerminateOnError="true" />',
+        '  </SystemConfig>',
+        '</MitigationPolicy>'
+      ) -join "`r`n"
+      $xml | Out-File -FilePath $xmlPath -Encoding UTF8 -Force
+      Set-ProcessMitigation -PolicyFilePath $xmlPath
+      Write-Output "Exploit Protection applied: ASLR ForceRelocate=true, SEHOP=true, Heap TerminateOnError=true"
+  when: mde_enable_exploit_protection | default(true)
+  changed_when: true
+  ignore_errors: true
+
+# ── Windows Defender Firewall ─────────────────────────────────────────────────
+# All three profiles must be enabled for MDE network protection to function.
+# The Domain profile is critical — if disabled, lateral movement detections fail.
+- name: Ensure Windows Defender Firewall is enabled on all profiles
+  ansible.windows.win_powershell:
+    script: |
+      Set-NetFirewallProfile -Profile Domain  -Enabled True
+      Set-NetFirewallProfile -Profile Private -Enabled True
+      Set-NetFirewallProfile -Profile Public  -Enabled True
+      Write-Output "Firewall enabled: Domain, Private, Public"
+  when: mde_enable_firewall | default(true)
+  changed_when: true
+
+# ── Firewall Blocked Connection Logging ───────────────────────────────────────
+# Logs dropped packets to pfirewall.log for all three profiles.
+# MDE ingests firewall drop events via ETW (Microsoft-Windows-Windows Firewall
+# With Advanced Security/Firewall). Max 32767 KB (~32 MB) per profile.
+- name: Enable Windows Firewall blocked-connection logging on all profiles
+  ansible.windows.win_powershell:
+    script: |
+      foreach ($profile in @('Domain', 'Private', 'Public')) {
+        Set-NetFirewallProfile -Profile $profile `
+          -LogBlocked True `
+          -LogMaxSizeKilobytes {{ mde_firewall_log_size_kb | default(32767) }}
+      }
+      Write-Output "Firewall blocked-connection logging enabled ({{ mde_firewall_log_size_kb | default(32767) }} KB per profile)"
+  when: mde_enable_firewall_logging | default(true)
+  changed_when: true
+
+# ── TLS 1.2 Enforcement ───────────────────────────────────────────────────────
+# MDE cloud service communication requires TLS 1.2.
+# Windows Server 2022 enables it by default but .NET apps may negotiate lower
+# versions unless SchUseStrongCrypto is set.
+- name: Enforce TLS 1.2 via SChannel registry (client + server)
+  ansible.windows.win_regedit:
+    path: "{{ item.path }}"
+    name: "{{ item.name }}"
+    data: "{{ item.data }}"
+    type: dword
+  loop:
+    - { path: 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.2\Client', name: Enabled,           data: 1 }
+    - { path: 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.2\Client', name: DisabledByDefault, data: 0 }
+    - { path: 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.2\Server', name: Enabled,           data: 1 }
+    - { path: 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.2\Server', name: DisabledByDefault, data: 0 }
+  when: mde_enforce_tls12 | default(true)
+
+- name: Force .NET Framework strong crypto and system TLS defaults
+  ansible.windows.win_powershell:
+    script: |
+      $paths = @(
+        'HKLM:\SOFTWARE\Microsoft\.NETFramework\v4.0.30319',
+        'HKLM:\SOFTWARE\Wow6432Node\Microsoft\.NETFramework\v4.0.30319'
+      )
+      foreach ($path in $paths) {
+        if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }
+        Set-ItemProperty -Path $path -Name SystemDefaultTlsVersions -Value 1 -Type DWord
+        Set-ItemProperty -Path $path -Name SchUseStrongCrypto        -Value 1 -Type DWord
+      }
+      Write-Output ".NET Framework TLS 1.2 enforced on all paths"
+  when: mde_enforce_tls12 | default(true)
+  changed_when: true
+
+# ── LSA Credential Hardening ──────────────────────────────────────────────────
+# RunAsPPL=1          — LSA Protected Process Light. Prevents LSASS credential
+#                       extraction by non-PPL processes (e.g. Mimikatz sekurlsa).
+#                       Requires a reboot to activate.
+# LmCompatibilityLevel=5 — Refuse LM and NTLMv1; accept NTLMv2 responses only.
+#                          Eliminates weakest auth protocols. MDI logs all NTLM
+#                          via Event 8004 regardless of version.
+# UseLogonCredential=0 — Disable WDigest plain-text credential caching in LSASS.
+# DisableRestrictedAdmin=0 — Enable Restricted Admin RDP so credentials are not
+#                            forwarded to the remote host.
+- name: Configure LSA credential hardening (PPL, NTLMv2-only, WDigest, Restricted Admin)
+  ansible.windows.win_regedit:
+    path: "{{ item.path }}"
+    name: "{{ item.name }}"
+    data: "{{ item.data | int }}"
+    type: dword
+  loop:
+    - { path: 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa',                       name: RunAsPPL,              data: "{{ mde_lsa_run_as_ppl | default(1) }}" }
+    - { path: 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa',                       name: LmCompatibilityLevel,  data: "{{ mde_lm_compat_level | default(5) }}" }
+    - { path: 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa',                       name: DisableRestrictedAdmin, data: "{{ mde_disable_restricted_admin | default(0) }}" }
+    - { path: 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\WDigest', name: UseLogonCredential,    data: "{{ mde_wdigest_use_logon_cred | default(0) }}" }
+  when: mde_enable_lsa_hardening | default(true)
+
+- name: Warn that LSA RunAsPPL requires a reboot to activate
+  ansible.builtin.debug:
+    msg: "NOTE: LSA RunAsPPL={{ mde_lsa_run_as_ppl | default(1) }} written to registry on {{ inventory_hostname }} — reboot required to activate PPL protection"
+  when: mde_enable_lsa_hardening | default(true)
+
+# ── SAM Remote Access (RestrictRemoteSAM) ─────────────────────────────────────
+# MDI sensor resolves IP addresses to hostnames via NTLM over RPC (port 135),
+# which requires calling the SAM API on remote hosts. If RestrictRemoteSAM
+# blocks the sensor's machine account, MDI raises the "Low success rate of
+# active name resolution" health alert and identity detections degrade.
+# Apply on ALL hosts — the DC's SYSTEM account queries member servers' SAM;
+# member servers' SAM must accept queries from the DC's machine account.
+# SDDL: Allows Builtin\Administrators + NetworkService + LocalSystem (RC = read).
+- name: Configure RestrictRemoteSAM to allow MDI NTLM/RPC name resolution
+  ansible.windows.win_regedit:
+    path: HKLM:\SYSTEM\CurrentControlSet\Control\Lsa
+    name: RestrictRemoteSAM
+    data: "{{ mde_restrict_remote_sam_sddl | default('O:SYG:SYD:(A;;RC;;;BA)(A;;RC;;;NS)(A;;RC;;;SY)') }}"
+    type: string
+  when: mde_configure_restrict_remote_sam | default(true)
+
+# ── PowerShell Script Block Logging ───────────────────────────────────────────
+# Event ID 4104 — captures the de-obfuscated content of every PS script block.
+# Critical for detecting AMSI bypasses and encoded command execution.
+- name: Enable PowerShell Script Block Logging (Event 4104)
+  ansible.windows.win_powershell:
+    script: |
+      $path = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging'
+      if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }
+      Set-ItemProperty -Path $path -Name EnableScriptBlockLogging           -Value 1 -Type DWord
+      Set-ItemProperty -Path $path -Name EnableScriptBlockInvocationLogging  -Value 0 -Type DWord
+      Write-Output "PS Script Block Logging enabled"
+  when: mde_enable_ps_scriptblock_logging | default(true)
+  changed_when: true
+
+# ── PowerShell Module Logging ─────────────────────────────────────────────────
+# Event ID 4103 — logs pipeline execution details for every PS module invocation.
+# Wildcard (*) captures all modules including built-ins and imported scripts.
+- name: Enable PowerShell Module Logging (Event 4103) for all modules
+  ansible.windows.win_powershell:
+    script: |
+      $base  = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ModuleLogging'
+      $names = "$base\ModuleNames"
+      if (-not (Test-Path $base))  { New-Item -Path $base  -Force | Out-Null }
+      if (-not (Test-Path $names)) { New-Item -Path $names -Force | Out-Null }
+      Set-ItemProperty -Path $base  -Name EnableModuleLogging -Value 1   -Type DWord
+      Set-ItemProperty -Path $names -Name '*'                 -Value '*' -Type String
+      Write-Output "PS Module Logging enabled (all modules)"
+  when: mde_enable_ps_module_logging | default(true)
+  changed_when: true
+
+# ── PowerShell Transcription ──────────────────────────────────────────────────
+# Writes full session transcripts to disk — useful for post-incident review.
+- name: Create PowerShell transcripts directory
+  ansible.windows.win_file:
+    path: "{{ mde_ps_transcription_path | default('C:\\PSTranscripts') }}"
+    state: directory
+  when: mde_enable_ps_transcription | default(true)
+
+- name: Enable PowerShell Transcription with invocation headers
+  ansible.windows.win_powershell:
+    script: |
+      $path = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription'
+      if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }
+      Set-ItemProperty -Path $path -Name EnableTranscripting    -Value 1 -Type DWord
+      Set-ItemProperty -Path $path -Name EnableInvocationHeader  -Value 1 -Type DWord
+      Set-ItemProperty -Path $path -Name OutputDirectory         -Value '{{ mde_ps_transcription_path | default("C:\\PSTranscripts") }}' -Type String
+      Write-Output "PS Transcription enabled → {{ mde_ps_transcription_path | default('C:\\PSTranscripts') }}"
+  when: mde_enable_ps_transcription | default(true)
+  changed_when: true
+
+# ── Classic Event Log Sizing ───────────────────────────────────────────────────
+# Default Security log is 20 MB — fills within hours under active testing.
+- name: Set Security, System, and Application event log maximum sizes
+  ansible.windows.win_powershell:
+    script: |
+      $logs = @{
+        Security    = {{ (mde_security_log_size_mb    | default(1024) | int) * 1048576 }}
+        System      = {{ (mde_system_log_size_mb      | default(512)  | int) * 1048576 }}
+        Application = {{ (mde_application_log_size_mb | default(512)  | int) * 1048576 }}
+      }
+      foreach ($log in $logs.GetEnumerator()) {
+        wevtutil sl $log.Key /ms:$($log.Value)
+        Write-Output "Set $($log.Key) log to $($log.Value / 1MB) MB"
+      }
+  changed_when: true
+
+# ── Additional Event Log Channels ─────────────────────────────────────────────
+# Enable and resize channels that are disabled or undersized by default.
+# WMI-Activity and DNS-Client are disabled by default on Windows Server.
+- name: Enable and resize additional event log channels
+  ansible.windows.win_powershell:
+    script: |
+      $channels = @(
+        @{ Name = 'Microsoft-Windows-Windows Defender/Operational'; SizeMB = {{ mde_defender_log_size_mb      | default(64)  }} },
+        @{ Name = 'Microsoft-Windows-PowerShell/Operational';        SizeMB = {{ mde_ps_operational_log_size_mb | default(128) }} },
+        @{ Name = 'Microsoft-Windows-WMI-Activity/Operational';      SizeMB = {{ mde_wmi_log_size_mb           | default(64)  }} },
+        @{ Name = 'Microsoft-Windows-TaskScheduler/Operational';     SizeMB = {{ mde_task_log_size_mb          | default(64)  }} },
+        @{ Name = 'Microsoft-Windows-DNS-Client/Operational';        SizeMB = {{ mde_dns_log_size_mb           | default(32)  }} }
+      )
+      foreach ($ch in $channels) {
+        $bytes = $ch.SizeMB * 1MB
+        try {
+          wevtutil sl "$($ch.Name)" /e:true /ms:$bytes 2>&1 | Out-Null
+          Write-Output "Configured: $($ch.Name) → $($ch.SizeMB) MB (enabled)"
+        } catch {
+          Write-Warning "Could not configure $($ch.Name): $_"
+        }
+      }
+  when: mde_enable_additional_log_channels | default(true)
+  changed_when: true
+
+# ── DC-Specific Event Log Channels ────────────────────────────────────────────
+# Directory Service log captures LDAP queries, DS replication, and object access
+# (Event 4662). Default 16 MB fills rapidly during detection scenario testing.
+# NTLM/Operational channel hosts Event 8004 (MDI NTLM enrichment) — disabled by
+# default on Server 2022 and requires explicit enable + resize.
+# Set mde_enable_dc_log_channels: true on DC hosts only.
+- name: Resize DC-specific event log channels (Directory Service + NTLM Operational)
+  ansible.windows.win_powershell:
+    script: |
+      wevtutil sl "Directory Service" /ms:{{ (mde_ds_log_size_mb | default(256) | int) * 1048576 }}
+      wevtutil sl "Microsoft-Windows-NTLM/Operational" /e:true /ms:{{ (mde_ntlm_op_log_size_mb | default(64) | int) * 1048576 }}
+      Write-Output "DC log channels: Directory Service={{ mde_ds_log_size_mb | default(256) }} MB, NTLM/Operational={{ mde_ntlm_op_log_size_mb | default(64) }} MB (enabled)"
+  when: mde_enable_dc_log_channels | default(false)
+  changed_when: true
+
+# ── LDAP Diagnostic Logging (Event 1644, DC-only) ─────────────────────────────
+# Field Engineering level 5 enables Event 1644 (LDAP Query Log) when queries
+# exceed the expensive/inefficient LDAP search thresholds. MDI ingests these
+# events to detect LDAP-based reconnaissance (T1069, T1018, BloodHound-style
+# enumeration). DC-only — set mde_enable_ldap_diagnostic_logging: true only on
+# hosts running the Active Directory Domain Services role.
+- name: Enable LDAP diagnostic logging for MDI LDAP recon detection (Event 1644)
+  ansible.windows.win_regedit:
+    path: HKLM:\SYSTEM\CurrentControlSet\Services\NTDS\Diagnostics
+    name: "15 Field Engineering"
+    data: "{{ mde_ldap_diagnostic_level | default(5) | int }}"
+    type: dword
+  when: mde_enable_ldap_diagnostic_logging | default(false)
+  changed_when: true
+
+# ── Process Creation Command Line Auditing (Event 4688) ───────────────────────
+# Adds full command-line arguments to Security log process creation events.
+# Sysmon Event ID 1 already captures this, but 4688 gives MDE a second native source.
+- name: Enable process creation command line auditing (Event 4688)
+  ansible.windows.win_regedit:
+    path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\Audit
+    name: ProcessCreationIncludeCmdLine_Enabled
+    data: 1
+    type: dword
+  when: mde_enable_process_cmdline_audit | default(true)
+
+# ── Security Intelligence Update ──────────────────────────────────────────────
+# Trigger an AV definition update before MDE onboards so initial scans run
+# against current signatures rather than stale base-image definitions.
+- name: Trigger Windows Defender security intelligence update
+  ansible.windows.win_powershell:
+    script: |
+      try {
+        Update-MpSignature -ErrorAction Stop
+        $ver = (Get-MpComputerStatus).AntivirusSignatureVersion
+        Write-Output "Signature update complete. Version: $ver"
+      } catch {
+        Write-Warning "Signature update failed (host may be offline at deploy time): $_"
+      }
+  when: mde_update_signatures | default(true)
+  changed_when: false
+  ignore_errors: true
+
+# ── Advanced Audit Policy ─────────────────────────────────────────────────────
+# SCENoApplyLegacyAuditPolicy = 1 forces Windows to respect auditpol subcategory
+# settings instead of overriding them with legacy category-level Group Policy.
+# Without this, GPO category settings silently stomp auditpol subcategory config.
+- name: Force advanced audit policy subcategories (SCENoApplyLegacyAuditPolicy)
+  ansible.windows.win_regedit:
+    path: HKLM:\SYSTEM\CurrentControlSet\Control\Lsa
+    name: SCENoApplyLegacyAuditPolicy
+    data: 1
+    type: dword
+  when: mde_enable_advanced_audit_policy | default(true)
+
+# auditpol subcategories — success+failure unless noted.
+# MDI-required subcategories per https://aka.ms/mdi/advancedaudit:
+#   Credential Validation        → 4776
+#   Computer Account Management  → 4741, 4743
+#   Distribution Group Mgmt      → 4753, 4763
+#   Security Group Management    → 4728-4758
+#   User Account Management      → 4726
+#   Directory Service Changes    → 5136
+#   Directory Service Access     → 4662 (requires domain object SACL — set by enable_mdi_gpo)
+#   Security System Extension    → 7045
+# Additional detection coverage:
+#   Process Creation, Logon, Removable Storage, IPsec Driver,
+#   Security State Change, System Integrity  → success+failure
+#   Logoff, Filtering Platform Connection, SAM, Filtering Platform Policy Change → success only
+- name: Configure advanced audit policy subcategories via auditpol
+  ansible.windows.win_powershell:
+    script: |
+      $sf = @(
+        'Credential Validation',
+        'Computer Account Management',
+        'Distribution Group Management',
+        'Security Group Management',
+        'User Account Management',
+        'Directory Service Changes',
+        'Directory Service Access',
+        'Security System Extension',
+        'Process Creation',
+        'Logon',
+        'Removable Storage',
+        'IPsec Driver',
+        'Security State Change',
+        'System Integrity'
+      )
+      $so = @(
+        'Logoff',
+        'Filtering Platform Connection',
+        'SAM',
+        'Filtering Platform Policy Change'
+      )
+      foreach ($sub in $sf) {
+        auditpol /set /subcategory:"$sub" /success:enable /failure:enable | Out-Null
+      }
+      foreach ($sub in $so) {
+        auditpol /set /subcategory:"$sub" /success:enable /failure:disable | Out-Null
+      }
+      Write-Output "Advanced audit subcategories configured (18 subcategories)"
+  when: mde_enable_advanced_audit_policy | default(true)
+  changed_when: true
+
+# ── Extended Audit Subcategories ──────────────────────────────────────────────
+# Additional subcategories beyond the MDI-required baseline for maximum visibility:
+#   DPAPI Activity          → 4692/4693 (master key export/import, Mimikatz dpapi) S+F
+#   Detailed File Share     → 5145 (named pipe/share access, lateral movement) S+F
+#   Token Right Adjusted    → 4703 (privilege enable/disable per-process) S+F
+#   Sensitive Privilege Use → 4673/4674 (SeDebug, SeTcb, SeBackup use) S+F
+#   Plug and Play Events    → 6416 (device connected, USB drops) S only
+#   Group Membership        → 4627 (group membership in logon token) S only
+- name: Configure extended audit policy subcategories (DPAPI, FileShare, Token, Privilege)
+  ansible.windows.win_powershell:
+    script: |
+      $sf = @(
+        'DPAPI Activity',
+        'Detailed File Share',
+        'Token Right Adjusted Events',
+        'Sensitive Privilege Use'
+      )
+      $so = @(
+        'Plug and Play Events',
+        'Group Membership'
+      )
+      foreach ($sub in $sf) {
+        auditpol /set /subcategory:"$sub" /success:enable /failure:enable | Out-Null
+      }
+      foreach ($sub in $so) {
+        auditpol /set /subcategory:"$sub" /success:enable /failure:disable | Out-Null
+      }
+      Write-Output "Extended audit subcategories configured (6 additional subcategories)"
+  when: mde_enable_extended_audit_subcategories | default(true)
+  changed_when: true
+
+# ── NTLM Auditing (DC only) ───────────────────────────────────────────────────
+# Enables Event 8004 — MDI enriches NTLM auth activities with server-accessed data.
+# Maps to Group Policy: Network security: Restrict NTLM: *
+#   RestrictSendingNTLMTraffic = 1  → Audit All (outgoing NTLM to remote servers)
+#   AuditNTLMInDomain          = 7  → Enable All (NTLM auth in this domain)
+#   AuditReceivingNTLMTraffic  = 2  → Enable auditing for all accounts (incoming)
+- name: Configure NTLM auditing registry keys (Event 8004)
+  ansible.windows.win_regedit:
+    path: HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0
+    name: "{{ item.name }}"
+    data: "{{ item.data }}"
+    type: dword
+  loop:
+    - { name: RestrictSendingNTLMTraffic, data: 1 }
+    - { name: AuditNTLMInDomain,          data: 7 }
+    - { name: AuditReceivingNTLMTraffic,  data: 2 }
+  when: mde_enable_ntlm_auditing | default(false)
+
+# ── ADCS CA Auditing (CA server only) ────────────────────────────────────────
+# AuditFilter 127 enables all CA audit categories:
+#   1=Start/Stop, 2=Backup/Restore, 4=Certificate Issued, 8=Cert Revoked,
+#   16=CRL Published, 32=Template Changed, 64=CA Config Changed
+# Also sets auditpol Certification Services subcategory for Event 4870/4871.
+- name: Enable ADCS Certificate Authority auditing (AuditFilter 127)
+  ansible.windows.win_powershell:
+    script: |
+      certutil -setreg CA\AuditFilter 127
+      Restart-Service certsvc -Force
+      Write-Output "ADCS CA auditing enabled (AuditFilter=127, certsvc restarted)"
+  when: mde_enable_adcs_ca_auditing | default(false)
+  changed_when: true
+  ignore_errors: true
+
+- name: Enable Certification Services audit subcategory via auditpol
+  ansible.windows.win_powershell:
+    script: |
+      auditpol /set /subcategory:"Certification Services" /success:enable /failure:enable | Out-Null
+      Write-Output "Certification Services auditpol configured"
+  when: mde_enable_adcs_ca_auditing | default(false)
+  changed_when: true
+
+# ── MDE Pre-Onboarding Readiness Check ────────────────────────────────────────
+# Runs Get-MpComputerStatus and logs all key Defender health fields before
+# onboarding. Provides a baseline for post-onboarding comparison and surfaces
+# any configuration issues (e.g., Tamper Protection state, passive mode, AV
+# disabled) before the MDE sensor installer runs. Not a hard failure — the
+# sensor installer itself will surface hard errors.
+- name: Run MDE pre-onboarding readiness check (Get-MpComputerStatus)
+  ansible.windows.win_powershell:
+    script: |
+      try {
+        $s = Get-MpComputerStatus -ErrorAction Stop
+        Write-Output "=== MDE Readiness Check ==="
+        Write-Output "AntivirusEnabled           : $($s.AntivirusEnabled)"
+        Write-Output "RealTimeProtectionEnabled  : $($s.RealTimeProtectionEnabled)"
+        Write-Output "BehaviorMonitorEnabled     : $($s.BehaviorMonitorEnabled)"
+        Write-Output "NISEnabled                 : $($s.NISEnabled)"
+        Write-Output "IoavProtectionEnabled      : $($s.IoavProtectionEnabled)"
+        Write-Output "AMRunningMode              : $($s.AMRunningMode)"
+        Write-Output "IsTamperProtected          : $($s.IsTamperProtected)"
+        Write-Output "AntivirusSignatureVersion  : $($s.AntivirusSignatureVersion)"
+        Write-Output "DefenderSignaturesOutOfDate: $($s.DefenderSignaturesOutOfDate)"
+        $issues = @()
+        if (-not $s.AntivirusEnabled)         { $issues += "AntivirusEnabled=False" }
+        if (-not $s.RealTimeProtectionEnabled){ $issues += "RealTimeProtectionEnabled=False" }
+        if (-not $s.BehaviorMonitorEnabled)   { $issues += "BehaviorMonitorEnabled=False" }
+        if ($s.AMRunningMode -notin @('Normal', 'Passive')) {
+          $issues += "AMRunningMode=$($s.AMRunningMode)"
+        }
+        if ($s.DefenderSignaturesOutOfDate)   { $issues += "Signatures out of date" }
+        if ($issues.Count -gt 0) {
+          Write-Warning "MDE readiness issues found: $($issues -join ' | ')"
+        } else {
+          Write-Output "MDE_READINESS_OK"
+        }
+      } catch {
+        Write-Warning "Could not run Get-MpComputerStatus: $_"
+      }
+  when: mde_run_readiness_check | default(true)
+  changed_when: false
+  ignore_errors: true
+
+# ── Summary ───────────────────────────────────────────────────────────────────
+- name: Show mde_prereqs deployment status
+  ansible.builtin.debug:
+    msg:
+      - "════════════════════════════════════════════════════════"
+      - "  mde_prereqs — Deployment Complete"
+      - "════════════════════════════════════════════════════════"
+      - "  Host                   : {{ inventory_hostname }}"
+      - "  ── Defender ──────────────────────────────────────── "
+      - "  DisableAntiSpyware fix : {{ mde_fix_disable_antispyware | default(true) }}"
+      - "  Defender services      : {{ mde_verify_defender_services | default(true) }}"
+      - "  Cloud Protection       : {{ mde_enable_cloud_protection | default(true) }} ({{ mde_cloud_block_level | default('High') }}, samples={{ mde_submit_samples_consent | default('NeverSend') }})"
+      - "  Scanning Fidelity      : hash={{ mde_enable_file_hash_computation | default(true) }}, email={{ mde_disable_email_scanning | default(false) | bool | ternary('disabled', 'enabled') }}, sig_interval={{ mde_signature_update_interval | default(1) }}h"
+      - "  Network Protection     : {{ mde_network_protection_mode | default('Enabled') }}"
+      - "  PUA Protection         : {{ mde_enable_pua_protection | default(true) }}"
+      - "  Controlled Folder CFA  : {{ mde_controlled_folder_access | default('AuditMode') }}"
+      - "  Exploit Protection     : {{ mde_enable_exploit_protection | default(true) }}"
+      - "  Signature Update       : {{ mde_update_signatures | default(true) }}"
+      - "  ── System ────────────────────────────────────────── "
+      - "  Power Plan HiPerf      : {{ mde_enable_high_performance_power_plan | default(true) }}"
+      - "  Telemetry Level        : {{ mde_telemetry_level | default(2) }} (Enhanced)"
+      - "  DiagTrack service      : {{ mde_ensure_diagtrack | default(true) }}"
+      - "  Health services        : {{ mde_ensure_health_services | default(true) }} (wscsvc, SecurityHealthSvc, EventLog, W32Time)"
+      - "  Firewall (all profiles): {{ mde_enable_firewall | default(true) }}"
+      - "  Firewall Drop Logging  : {{ mde_enable_firewall_logging | default(true) }} ({{ mde_firewall_log_size_kb | default(32767) }} KB)"
+      - "  TLS 1.2 Enforced       : {{ mde_enforce_tls12 | default(true) }}"
+      - "  LSA Hardening          : {{ mde_enable_lsa_hardening | default(true) }} (PPL={{ mde_lsa_run_as_ppl | default(1) }}, LmCompat={{ mde_lm_compat_level | default(5) }}, WDigest={{ mde_wdigest_use_logon_cred | default(0) }}, RestrictedAdmin={{ mde_disable_restricted_admin | default(0) | bool | ternary('off', 'on') }})"
+      - "  RestrictRemoteSAM      : {{ mde_configure_restrict_remote_sam | default(true) }} (MDI NTLM/RPC name resolution)"
+      - "  ── Logging ───────────────────────────────────────── "
+      - "  PS ScriptBlock Log     : {{ mde_enable_ps_scriptblock_logging | default(true) }}"
+      - "  PS Module Log          : {{ mde_enable_ps_module_logging | default(true) }}"
+      - "  PS Transcription       : {{ mde_enable_ps_transcription | default(true) }} → {{ mde_ps_transcription_path | default('C:\\PSTranscripts') }}"
+      - "  Security Log           : {{ mde_security_log_size_mb | default(1024) }} MB"
+      - "  Additional channels    : Defender/PS/WMI/TaskSched/DNS-Client enabled"
+      - "  DC log channels        : {{ mde_enable_dc_log_channels | default(false) }} (DS={{ mde_ds_log_size_mb | default(256) }} MB, NTLM-Op={{ mde_ntlm_op_log_size_mb | default(64) }} MB)"
+      - "  LDAP Diag (Event 1644) : {{ mde_enable_ldap_diagnostic_logging | default(false) }} (Field Engineering level={{ mde_ldap_diagnostic_level | default(5) }})"
+      - "  Process CmdLine 4688   : {{ mde_enable_process_cmdline_audit | default(true) }}"
+      - "  Advanced Audit Policy  : {{ mde_enable_advanced_audit_policy | default(true) }} (18 subcategories)"
+      - "  Extended Audit Subs    : {{ mde_enable_extended_audit_subcategories | default(true) }} (DPAPI, FileShare, Token, Privilege, PnP, GroupMembership)"
+      - "  NTLM Auditing (8004)   : {{ mde_enable_ntlm_auditing | default(false) }}"
+      - "  ADCS CA Auditing       : {{ mde_enable_adcs_ca_auditing | default(false) }}"
+      - "  MDE Readiness Check    : {{ mde_run_readiness_check | default(true) }} (see task output for Get-MpComputerStatus)"
+      - "════════════════════════════════════════════════════════"
+      - "  ── Access ────────────────────────────────────────── "
+      - "  Host IP                : {{ ansible_host }}"
+      - "  Local Admin            : localuser / password"
+      - "  Domain                 : {{ domain_name | default('zsec.local') }}"
+      - "  Domain Admin           : domainadmin / D0main@dmin2026"
+      - "  Domain User            : domainuser / Summer2026!"
+      - "  MDI DSA Account        : svc_mdi / MdiSensor2026!@ (DC01 only)"
+      - "  ── Key Lab Accounts ──────────────────────────────── "
+      - "  jsmith (IT-Admins)     : Summer2026!"
+      - "  svc_backup (Kerberoast): SvcBackup2026!"
+      - "  svc_sql (Kerberoast)   : SqlService2026!"
+      - "  svc_legacy (ASREPRoast): Legacy2026!"
+      - "  svc_deploy (Backup-Op) : D3pl0y@utomation!"
+      - "════════════════════════════════════════════════════════"
+
+- name: Log successful deployment
+  ansible.windows.win_powershell:
+    script: Add-Content -Path 'C:\Windows\Temp\zsec-ansible.log' -Value "OK mde_prereqs on {{ inventory_hostname }}" -ErrorAction SilentlyContinue
+  ignore_errors: true

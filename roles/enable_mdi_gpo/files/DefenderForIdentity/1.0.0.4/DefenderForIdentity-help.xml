@@ -1,0 +1,1965 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<helpItems schema="maml" xmlns="http://msh">
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Clear-MDISensorProxyConfiguration</command:name>
+      <command:verb>Clear</command:verb>
+      <command:noun>MDISensorProxyConfiguration</command:noun>
+      <maml:description>
+        <maml:para>Clears the proxy configuration for the Defender for Identity sensor.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>This function clears the proxy configuration for the Defender for Identity sensor.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Clear-MDISensorProxyConfiguration</maml:name>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+          <maml:name>Confirm</maml:name>
+          <maml:description>
+            <maml:para>Prompts you for confirmation before running the cmdlet.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+          <maml:name>WhatIf</maml:name>
+          <maml:description>
+            <maml:para>Shows what would happen if the cmdlet runs. The cmdlet isn't run.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+        <maml:name>Confirm</maml:name>
+        <maml:description>
+          <maml:para>Prompts you for confirmation before running the cmdlet.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+        <maml:name>WhatIf</maml:name>
+        <maml:description>
+          <maml:para>Shows what would happen if the cmdlet runs. The cmdlet isn't run.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes />
+    <command:returnValues />
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 1 --------------------------</maml:title>
+        <dev:code>Clear-MDISensorProxyConfiguration</dev:code>
+        <dev:remarks>
+          <maml:para>This example clears the proxy configuration for the Defender for Identity sensor.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://go.microsoft.com/fwlink/?LinkID=2248207</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Get-MDISensorProxyConfiguration</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Set-MDISensorProxyConfiguration</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Get-MDIConfiguration</command:name>
+      <command:verb>Get</command:verb>
+      <command:noun>MDIConfiguration</command:noun>
+      <maml:description>
+        <maml:para>Gets the configuration for various Defender for Identity post-deployment required settings.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>The `Get-MDIConfiguration` function gets the configuration for various Defender for Identity post-deployment required settings.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Get-MDIConfiguration</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
+          <maml:name>Mode</maml:name>
+          <maml:description>
+            <maml:para>Specifies the mode to use. You must specify one of the following values:</maml:para>
+            <maml:para>- `Domain`: Collect settings from the Group Policy objects</maml:para>
+            <maml:para>- `LocalMachine`: Collect settings from the local machine</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
+          <maml:name>Configuration</maml:name>
+          <maml:description>
+            <maml:para>Specifies the configuration to get. You can specify one or more of the following values:</maml:para>
+            <maml:para>- `All` (all configurations)</maml:para>
+            <maml:para>- `AdfsAuditing`</maml:para>
+            <maml:para>- `AdRecycleBin`</maml:para>
+            <maml:para>- `AdvancedAuditPolicyCAs`</maml:para>
+            <maml:para>- `AdvancedAuditPolicyDCs`</maml:para>
+            <maml:para>- `CAAuditing`</maml:para>
+            <maml:para>- `ConfigurationContainerAuditing`</maml:para>
+            <maml:para>- `DeletedObjectsContainerPermission`</maml:para>
+            <maml:para>- `DomainObjectAuditing`</maml:para>
+            <maml:para>- `EntraConnectAuditing`</maml:para>
+            <maml:para>- `RemoteSAM`</maml:para>
+            <maml:para>- `DomainObjectAuditing`</maml:para>
+            <maml:para>- `NTLMAuditing`</maml:para>
+            <maml:para>- `ProcessorPerformance`</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Domain</maml:name>
+          <maml:description>
+            <maml:para>Specifies the name of the domain to run the command against. This parameter is optional and defaults to the user's DNS domain.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>GpoNamePrefix</maml:name>
+          <maml:description>
+            <maml:para>Specifies a prefix for the Group Policy Objects (GPO) names to be searched. Use this parameter for GPO naming convention.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Identity</maml:name>
+          <maml:description>
+            <maml:para>Specifies the name of the service account to use for the EntraConnectAuditing or RemoteSAM configuration. This parameter is mandatory.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Server</maml:name>
+          <maml:description>
+            <maml:para>Specifies the name of the server to run the command against. This parameter is optional and defaults to the PDC Emulator in the domain.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
+        <maml:name>Configuration</maml:name>
+        <maml:description>
+          <maml:para>Specifies the configuration to get. You can specify one or more of the following values:</maml:para>
+          <maml:para>- `All` (all configurations)</maml:para>
+          <maml:para>- `AdfsAuditing`</maml:para>
+          <maml:para>- `AdRecycleBin`</maml:para>
+          <maml:para>- `AdvancedAuditPolicyCAs`</maml:para>
+          <maml:para>- `AdvancedAuditPolicyDCs`</maml:para>
+          <maml:para>- `CAAuditing`</maml:para>
+          <maml:para>- `ConfigurationContainerAuditing`</maml:para>
+          <maml:para>- `DeletedObjectsContainerPermission`</maml:para>
+          <maml:para>- `DomainObjectAuditing`</maml:para>
+          <maml:para>- `EntraConnectAuditing`</maml:para>
+          <maml:para>- `RemoteSAM`</maml:para>
+          <maml:para>- `DomainObjectAuditing`</maml:para>
+          <maml:para>- `NTLMAuditing`</maml:para>
+          <maml:para>- `ProcessorPerformance`</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String[]</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Domain</maml:name>
+        <maml:description>
+          <maml:para>Specifies the name of the domain to run the command against. This parameter is optional and defaults to the user's DNS domain.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>GpoNamePrefix</maml:name>
+        <maml:description>
+          <maml:para>Specifies a prefix for the Group Policy Objects (GPO) names to be searched. Use this parameter for GPO naming convention.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Identity</maml:name>
+        <maml:description>
+          <maml:para>Specifies the name of the service account to use for the EntraConnectAuditing or RemoteSAM configuration. This parameter is mandatory.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
+        <maml:name>Mode</maml:name>
+        <maml:description>
+          <maml:para>Specifies the mode to use. You must specify one of the following values:</maml:para>
+          <maml:para>- `Domain`: Collect settings from the Group Policy objects</maml:para>
+          <maml:para>- `LocalMachine`: Collect settings from the local machine</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Server</maml:name>
+        <maml:description>
+          <maml:para>Specifies the name of the server to run the command against. This parameter is optional and defaults to the PDC Emulator in the domain.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes />
+    <command:returnValues />
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 1 --------------------------</maml:title>
+        <dev:code>Get-MDIConfiguration -Mode LocalMachine -Configuration NTLMAuditing
+
+Name         Status Details
+----         ------ -------
+NTLMAuditing   True {@{Path=HKLM:\System\CurrentControlSet\Services\Netlogon\Parameters\; Name=AuditNTLMInDomain...</dev:code>
+        <dev:remarks>
+          <maml:para>This example returns the `NTLMAuditing` configuration for the local machine.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 2 --------------------------</maml:title>
+        <dev:code>Get-MDIConfiguration -Mode Domain -Configuration All -GpoNamePrefix 'CONTOSO' -Identity 'mdisvc01'
+
+Configuration                  Mode   Status Details
+-------------                  ----   ------ -------
+AdfsAuditing                   Domain   True {@{Account=Everyone; SecurityIdentifier=S-1-1-0; AccessMask=48; Access...
+AdRecycleBin                   Domain   True Active Directory Recycle Bin is Enabled
+AdvancedAuditPolicyCAs         Domain  False 'CONTOSO - Advanced Audit Policy for CAs' - GPO not found
+AdvancedAuditPolicyDCs         Domain  False 'CONTOSO - Advanced Audit Policy for DCs' - GPO not found
+CAAuditing                     Domain  False 'CONTOSO - Auditing for CAs' - GPO not found
+ConfigurationContainerAuditing Domain   True {@{Account=Everyone; SecurityIdentifier=S-1-1-0; AccessMask=32; Access...
+DomainObjectAuditing           Domain   True {@{Account=Everyone; SecurityIdentifier=S-1-1-0; AccessMask=852331; Ac...
+EntraConnectAuditing           Domain  False 'CONTOSO - Advanced Audit and URA Policy for Entra Connect' - GPO not ...
+NTLMAuditing                   Domain  False 'CONTOSO - NTLM Auditing for DCs' - GPO not found
+ProcessorPerformance           Domain  False 'CONTOSO - Processor Performance' - GPO not found
+RemoteSAM                      Domain  False 'CONTOSO - Remote SAM Access' - GPO not found</dev:code>
+        <dev:remarks>
+          <maml:para>This example returns all configurations for the domain (including GPOs and their links), using the `CONTOSO` prefix to search for the GPO names.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://go.microsoft.com/fwlink/?LinkID=2248306</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Set-MDIConfiguration</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Test-MDIConfiguration</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>New-MDIConfigurationReport</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Get-MDISensorProxyConfiguration</command:name>
+      <command:verb>Get</command:verb>
+      <command:noun>MDISensorProxyConfiguration</command:noun>
+      <maml:description>
+        <maml:para>Retrieves the proxy configuration for the Defender for Identity sensor.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>This function retrieves the proxy configuration for the Defender for Identity sensor. If the sensor configuration can't be read, the function returns `$null`.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Get-MDISensorProxyConfiguration</maml:name>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters />
+    <command:inputTypes />
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>System.Object</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>Returns a `PSCustomObject` representing the proxy configuration for the Defender for Identity sensor. If the sensor configuration can't be read, the function returns `$null`.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 1 --------------------------</maml:title>
+        <dev:code>Get-MDISensorProxyConfiguration
+
+IsProxyEnabled               : True
+IsAuthenticationProxyEnabled : True
+Url                          : https://myProxy.contoso.com
+UserName                     : CONTOSO\proxyUser
+EncryptedUserPasswordData    : PgYTSj0SW6fNx...==
+CertificateThumbprint        : A7A60C2841A0104C9E199C786849228C56223E03</dev:code>
+        <dev:remarks>
+          <maml:para>This example returns the applied proxy configuration for the Defender for Identity sensor.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://go.microsoft.com/fwlink/?LinkID=2248401</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Clear-MDISensorProxyConfiguration</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Set-MDISensorProxyConfiguration</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>New-MDIConfigurationReport</command:name>
+      <command:verb>New</command:verb>
+      <command:noun>MDIConfigurationReport</command:noun>
+      <maml:description>
+        <maml:para>Generates a report of MDI domain configuration and saves it as an HTML and a detailed JSON file.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Generates a report of MDI domain configuration and saves it as HTML file and detailed JSON files. The report validates the domain SACLs and the presence of the MDI related configuration GPOs. The HTML report includes a table with the status for each configuration and a link to the detailed JSON data.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>New-MDIConfigurationReport</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
+          <maml:name>Path</maml:name>
+          <maml:description>
+            <maml:para>Specifies the directory where to save the HTML and JSON report files.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Domain</maml:name>
+          <maml:description>
+            <maml:para>Specifies the name of the domain to run the command against. This parameter is optional and defaults to the user's DNS domain.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>GpoNamePrefix</maml:name>
+          <maml:description>
+            <maml:para>Specifies a prefix for the Group Policy Objects (GPO) names to be searched. Use this parameter for GPO naming convention.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Identity</maml:name>
+          <maml:description>
+            <maml:para>Specifies the name of the service account used for the EntraConnectAuditing or RemoteSAM configuration. This parameter is mandatory in the `Domain` mode.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Mode</maml:name>
+          <maml:description>
+            <maml:para>Specifies the mode to use. You must specify one of the following values:</maml:para>
+            <maml:para>- `Domain`: Collect settings from the Group Policy objects</maml:para>
+            <maml:para>- `LocalMachine`: Collect settings from the local machine</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>OpenHtmlReport</maml:name>
+          <maml:description>
+            <maml:para>If specified, opens the HTML report after it's generated.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Domain</maml:name>
+        <maml:description>
+          <maml:para>Specifies the name of the domain to run the command against. This parameter is optional and defaults to the user's DNS domain.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>GpoNamePrefix</maml:name>
+        <maml:description>
+          <maml:para>Specifies a prefix for the Group Policy Objects (GPO) names to be searched. Use this parameter for GPO naming convention.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Identity</maml:name>
+        <maml:description>
+          <maml:para>Specifies the name of the service account used for the EntraConnectAuditing or RemoteSAM configuration. This parameter is mandatory in the `Domain` mode.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Mode</maml:name>
+        <maml:description>
+          <maml:para>Specifies the mode to use. You must specify one of the following values:</maml:para>
+          <maml:para>- `Domain`: Collect settings from the Group Policy objects</maml:para>
+          <maml:para>- `LocalMachine`: Collect settings from the local machine</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>OpenHtmlReport</maml:name>
+        <maml:description>
+          <maml:para>If specified, opens the HTML report after it's generated.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
+        <maml:name>Path</maml:name>
+        <maml:description>
+          <maml:para>Specifies the directory where to save the HTML and JSON report files.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes />
+    <command:returnValues />
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 1 --------------------------</maml:title>
+        <dev:code>New-MDIConfigurationReport -Path "C:\Reports" -OpenHtmlReport</dev:code>
+        <dev:remarks>
+          <maml:para>This example generates a report of MDI domain configuration, saves it as HTML and JSON files in the `C:\Reports` directory, and opens the HTML report after in your default browser.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://go.microsoft.com/fwlink/?LinkID=2248208</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Get-MDIConfiguration</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Set-MDIConfiguration</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>New-MDIDSA</command:name>
+      <command:verb>New</command:verb>
+      <command:noun>MDIDSA</command:noun>
+      <maml:description>
+        <maml:para>Creates a new Directory Service Account (DSA).</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>This function creates a new Directory Service Account (DSA). It can create either a GMSA (Group Managed Service Account) or a standard service account based on the provided parameters, and sets the required permissions for the Deleted Objects container.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>New-MDIDSA</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
+          <maml:name>Identity</maml:name>
+          <maml:description>
+            <maml:para>Specifies the name of the service account to be created. This parameter is mandatory and must be a string with a length between 1 and 16 characters.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="3" aliases="none">
+          <maml:name>BaseDn</maml:name>
+          <maml:description>
+            <maml:para>Specifies the base distinguished name (DN) for the service account. This parameter is optional and for standard accounts it defaults to the Users container in your domain (for example, "CN=Users,DC=Contoso,DC=com"). GMSAs are created under the Managed Service Accounts container.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Domain</maml:name>
+          <maml:description>
+            <maml:para>Specifies the name of the domain to run the command against. This parameter is optional and defaults to the user's DNS domain.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>ForceStandardAccount</maml:name>
+          <maml:description>
+            <maml:para>If specified, forces the creation of a standard service account instead of a GMSA.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>GmsaGroupName</maml:name>
+          <maml:description>
+            <maml:para>Specifies the name of the GMSA group. This parameter is mandatory and must be a string with a length between 1 and 28 characters.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Server</maml:name>
+          <maml:description>
+            <maml:para>Specifies the name of the server to run the command against. This parameter is optional and defaults to the PDC Emulator in the domain.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="3" aliases="none">
+        <maml:name>BaseDn</maml:name>
+        <maml:description>
+          <maml:para>Specifies the base distinguished name (DN) for the service account. This parameter is optional and for standard accounts it defaults to the Users container in your domain (for example, "CN=Users,DC=Contoso,DC=com"). GMSAs are created under the Managed Service Accounts container.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Domain</maml:name>
+        <maml:description>
+          <maml:para>Specifies the name of the domain to run the command against. This parameter is optional and defaults to the user's DNS domain.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>ForceStandardAccount</maml:name>
+        <maml:description>
+          <maml:para>If specified, forces the creation of a standard service account instead of a GMSA.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>GmsaGroupName</maml:name>
+        <maml:description>
+          <maml:para>Specifies the name of the GMSA group. This parameter is mandatory and must be a string with a length between 1 and 28 characters.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
+        <maml:name>Identity</maml:name>
+        <maml:description>
+          <maml:para>Specifies the name of the service account to be created. This parameter is mandatory and must be a string with a length between 1 and 16 characters.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Server</maml:name>
+        <maml:description>
+          <maml:para>Specifies the name of the server to run the command against. This parameter is optional and defaults to the PDC Emulator in the domain.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes />
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>By default, the cmdlet returns `$true` when the specified Directory Service Account (DSA) has been created successfully.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 1 --------------------------</maml:title>
+        <dev:code>New-MDIDSA -Identity "mdiSvc01" -GmsaGroupName "mdiSvcGroup01"</dev:code>
+        <dev:remarks>
+          <maml:para>This example creates a new GMSA service account with the name "mdiSvc01" and the GMSA group name "mdiSvcGroup01".</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 2 --------------------------</maml:title>
+        <dev:code>New-MDIDSA -Identity "mdiSvc02" -ForceStandardAccount</dev:code>
+        <dev:remarks>
+          <maml:para>This example creates a new standard service account with the name "mdiSvc02".</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://go.microsoft.com/fwlink/?linkid=2282309</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Test-MDIDSA</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Set-MDIConfiguration</command:name>
+      <command:verb>Set</command:verb>
+      <command:noun>MDIConfiguration</command:noun>
+      <maml:description>
+        <maml:para>Sets the configuration for various Defender for Identity post-deployment required settings.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>The `Set-MDIConfiguration` function sets the configuration for various Defender for Identity post-deployment required settings.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Set-MDIConfiguration</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="1" aliases="none">
+          <maml:name>Mode</maml:name>
+          <maml:description>
+            <maml:para>Specifies the mode to use. You must specify one of the following values:</maml:para>
+            <maml:para>- `Domain`: Collect settings from the Group Policy objects</maml:para>
+            <maml:para>- `LocalMachine`: Collect settings from the local machine</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="2" aliases="none">
+          <maml:name>Configuration</maml:name>
+          <maml:description>
+            <maml:para>Specifies the configuration to set. You can specify one or more of the following values:</maml:para>
+            <maml:para>- `All` (all configurations)</maml:para>
+            <maml:para>- `AdfsAuditing`</maml:para>
+            <maml:para>- `AdRecycleBin`</maml:para>
+            <maml:para>- `AdvancedAuditPolicyCAs`</maml:para>
+            <maml:para>- `AdvancedAuditPolicyDCs`</maml:para>
+            <maml:para>- `CAAuditing`</maml:para>
+            <maml:para>- `ConfigurationContainerAuditing`</maml:para>
+            <maml:para>- `DeletedObjectsContainerPermission`</maml:para>
+            <maml:para>- `DomainObjectAuditing`</maml:para>
+            <maml:para>- `EntraConnectAuditing`</maml:para>
+            <maml:para>- `RemoteSAM`</maml:para>
+            <maml:para>- `DomainObjectAuditing`</maml:para>
+            <maml:para>- `NTLMAuditing`</maml:para>
+            <maml:para>- `ProcessorPerformance`</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>CreateGpoDisabled</maml:name>
+          <maml:description>
+            <maml:para>If specified, the GPOs are created and kept as disabled. This parameter is valid only in `Domain` mode.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Domain</maml:name>
+          <maml:description>
+            <maml:para>Specifies the name of the domain to run the command against. This parameter is optional and defaults to the user's DNS domain.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Force</maml:name>
+          <maml:description>
+            <maml:para>If specified, set the configuration or create GPOs without validating the current state.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>GpoNamePrefix</maml:name>
+          <maml:description>
+            <maml:para>Specifies a prefix for the Group Policy Objects (GPO) names to be created. Use this parameter for GPO naming convention. Note: Because the GPO's display name may not be unique, an error is returned if another GPO in the domain has the same display name.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Identity</maml:name>
+          <maml:description>
+            <maml:para>Specifies the name of the service account to use for the EntraConnectAuditing or RemoteSAM configuration. This parameter is mandatory.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Server</maml:name>
+          <maml:description>
+            <maml:para>Specifies the name of the server to run the command against. This parameter is optional and defaults to the PDC Emulator in the domain.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>SkipGpoLink</maml:name>
+          <maml:description>
+            <maml:para>If specified, don't create GPO links. This parameter is valid only in `Domain` mode.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+          <maml:name>Confirm</maml:name>
+          <maml:description>
+            <maml:para>Prompts you for confirmation before running the cmdlet.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+          <maml:name>WhatIf</maml:name>
+          <maml:description>
+            <maml:para>Shows what would happen if the cmdlet runs. The cmdlet isn't run.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="2" aliases="none">
+        <maml:name>Configuration</maml:name>
+        <maml:description>
+          <maml:para>Specifies the configuration to set. You can specify one or more of the following values:</maml:para>
+          <maml:para>- `All` (all configurations)</maml:para>
+          <maml:para>- `AdfsAuditing`</maml:para>
+          <maml:para>- `AdRecycleBin`</maml:para>
+          <maml:para>- `AdvancedAuditPolicyCAs`</maml:para>
+          <maml:para>- `AdvancedAuditPolicyDCs`</maml:para>
+          <maml:para>- `CAAuditing`</maml:para>
+          <maml:para>- `ConfigurationContainerAuditing`</maml:para>
+          <maml:para>- `DeletedObjectsContainerPermission`</maml:para>
+          <maml:para>- `DomainObjectAuditing`</maml:para>
+          <maml:para>- `EntraConnectAuditing`</maml:para>
+          <maml:para>- `RemoteSAM`</maml:para>
+          <maml:para>- `DomainObjectAuditing`</maml:para>
+          <maml:para>- `NTLMAuditing`</maml:para>
+          <maml:para>- `ProcessorPerformance`</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String[]</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>CreateGpoDisabled</maml:name>
+        <maml:description>
+          <maml:para>If specified, the GPOs are created and kept as disabled. This parameter is valid only in `Domain` mode.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Domain</maml:name>
+        <maml:description>
+          <maml:para>Specifies the name of the domain to run the command against. This parameter is optional and defaults to the user's DNS domain.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Force</maml:name>
+        <maml:description>
+          <maml:para>If specified, set the configuration or create GPOs without validating the current state.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>GpoNamePrefix</maml:name>
+        <maml:description>
+          <maml:para>Specifies a prefix for the Group Policy Objects (GPO) names to be created. Use this parameter for GPO naming convention. Note: Because the GPO's display name may not be unique, an error is returned if another GPO in the domain has the same display name.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Identity</maml:name>
+        <maml:description>
+          <maml:para>Specifies the name of the service account to use for the EntraConnectAuditing or RemoteSAM configuration. This parameter is mandatory.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="1" aliases="none">
+        <maml:name>Mode</maml:name>
+        <maml:description>
+          <maml:para>Specifies the mode to use. You must specify one of the following values:</maml:para>
+          <maml:para>- `Domain`: Collect settings from the Group Policy objects</maml:para>
+          <maml:para>- `LocalMachine`: Collect settings from the local machine</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Server</maml:name>
+        <maml:description>
+          <maml:para>Specifies the name of the server to run the command against. This parameter is optional and defaults to the PDC Emulator in the domain.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>SkipGpoLink</maml:name>
+        <maml:description>
+          <maml:para>If specified, don't create GPO links. This parameter is valid only in `Domain` mode.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+        <maml:name>Confirm</maml:name>
+        <maml:description>
+          <maml:para>Prompts you for confirmation before running the cmdlet.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+        <maml:name>WhatIf</maml:name>
+        <maml:description>
+          <maml:para>Shows what would happen if the cmdlet runs. The cmdlet isn't run.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes />
+    <command:returnValues />
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 1 --------------------------</maml:title>
+        <dev:code>Set-MDIConfiguration -Mode LocalMachine -Configuration NTLMAuditing</dev:code>
+        <dev:remarks>
+          <maml:para>This example sets the `NTLMAuditing` configuration for the local machine.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 2 --------------------------</maml:title>
+        <dev:code>Set-MDIConfiguration -Mode Domain -Configuration All -Identity mdisvc01</dev:code>
+        <dev:remarks>
+          <maml:para>This example sets all configurations for the domain, creating the GPOs and linking them.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 3 --------------------------</maml:title>
+        <dev:code>Set-MDIConfiguration -Mode Domain -Configuration All -GpoNamePrefix 'CONTOSO' -SkipGpoLink
+-Identity mdisvc01</dev:code>
+        <dev:remarks>
+          <maml:para>This example sets all configurations for the domain, creating the GPOs with a `CONTOSO` prefix in their name, without linking the GPOs</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://go.microsoft.com/fwlink/?LinkID=2248402</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Get-MDIConfiguration</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Test-MDIConfiguration</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>New-MDIConfigurationReport</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Set-MDISensorProxyConfiguration</command:name>
+      <command:verb>Set</command:verb>
+      <command:noun>MDISensorProxyConfiguration</command:noun>
+      <maml:description>
+        <maml:para>Sets the proxy configuration for the Defender for Identity sensor.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>This cmdlet sets the proxy configuration for the Defender for Identity sensor. If the ProxyUrl parameter is null or empty, the function clears the proxy configuration. If you specify the ProxyCredential parameter, the function encrypts the password and stores it in the sensor configuration file.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Set-MDISensorProxyConfiguration</maml:name>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
+          <maml:name>ProxyUrl</maml:name>
+          <maml:description>
+            <maml:para>The URL of the proxy server.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
+          <maml:name>ProxyCredential</maml:name>
+          <maml:description>
+            <maml:para>The credentials to use to authenticate with the proxy server. You can use `Get-Credential` to create a credential object.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Management.Automation.PSCredential</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Management.Automation.PSCredential</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+          <maml:name>Confirm</maml:name>
+          <maml:description>
+            <maml:para>Prompts you for confirmation before running the cmdlet.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+          <maml:name>WhatIf</maml:name>
+          <maml:description>
+            <maml:para>Shows what would happen if the cmdlet runs. The cmdlet isn't run.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
+        <maml:name>ProxyCredential</maml:name>
+        <maml:description>
+          <maml:para>The credentials to use to authenticate with the proxy server. You can use `Get-Credential` to create a credential object.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.PSCredential</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.PSCredential</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
+        <maml:name>ProxyUrl</maml:name>
+        <maml:description>
+          <maml:para>The URL of the proxy server.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+        <maml:name>Confirm</maml:name>
+        <maml:description>
+          <maml:para>Prompts you for confirmation before running the cmdlet.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+        <maml:name>WhatIf</maml:name>
+        <maml:description>
+          <maml:para>Shows what would happen if the cmdlet runs. The cmdlet isn't run.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes />
+    <command:returnValues />
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 1 --------------------------</maml:title>
+        <dev:code>Set-MDISensorProxyConfiguration -ProxyUrl 'http://proxy.contoso.com:8080' -ProxyCredential $Credential</dev:code>
+        <dev:remarks>
+          <maml:para>This example sets the proxy configuration for the Defender for Identity sensor to use the specified proxy server and credentials.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 2 --------------------------</maml:title>
+        <dev:code>Set-MDISensorProxyConfiguration -ProxyUrl 'http://proxy.contoso.com:8080'</dev:code>
+        <dev:remarks>
+          <maml:para>This example sets the proxy configuration for the Defender for Identity sensor to use the specified proxy server without any credentials.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://go.microsoft.com/fwlink/?LinkID=2248117</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Clear-MDISensorProxyConfiguration</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Get-MDIConfiguration</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Get-Credential</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Test-MDIConfiguration</command:name>
+      <command:verb>Test</command:verb>
+      <command:noun>MDIConfiguration</command:noun>
+      <maml:description>
+        <maml:para>Validates the configuration for various Defender for Identity post-deployment required settings.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>This cmdlet validates the Defender for Identity configuration for settings specified by the Configuration parameter.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Test-MDIConfiguration</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
+          <maml:name>Mode</maml:name>
+          <maml:description>
+            <maml:para>Specifies the mode to use. You must specify one of the following values:</maml:para>
+            <maml:para>- `Domain`: Collect settings from the Group Policy objects</maml:para>
+            <maml:para>- `LocalMachine`: Collect settings from the local machine</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
+          <maml:name>Configuration</maml:name>
+          <maml:description>
+            <maml:para>Specifies the configuration to test. You can specify one or more of the following values:</maml:para>
+            <maml:para>- `All` (all configurations)</maml:para>
+            <maml:para>- `AdfsAuditing`</maml:para>
+            <maml:para>- `AdRecycleBin`</maml:para>
+            <maml:para>- `AdvancedAuditPolicyCAs`</maml:para>
+            <maml:para>- `AdvancedAuditPolicyDCs`</maml:para>
+            <maml:para>- `CAAuditing`</maml:para>
+            <maml:para>- `ConfigurationContainerAuditing`</maml:para>
+            <maml:para>- `DeletedObjectsContainerPermission`</maml:para>
+            <maml:para>- `DomainObjectAuditing`</maml:para>
+            <maml:para>- `EntraConnectAuditing`</maml:para>
+            <maml:para>- `RemoteSAM`</maml:para>
+            <maml:para>- `DomainObjectAuditing`</maml:para>
+            <maml:para>- `NTLMAuditing`</maml:para>
+            <maml:para>- `ProcessorPerformance`</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Domain</maml:name>
+          <maml:description>
+            <maml:para>Specifies the name of the domain to run the command against. This parameter is optional and defaults to the user's DNS domain.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>GpoNamePrefix</maml:name>
+          <maml:description>
+            <maml:para>Specifies a prefix for the Group Policy Objects (GPO) names to be searched and tested. Use this parameter for GPO naming convention.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Identity</maml:name>
+          <maml:description>
+            <maml:para>Specifies the name of the service account to use for the EntraConnectAuditing or RemoteSAM configuration. This parameter is mandatory.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Server</maml:name>
+          <maml:description>
+            <maml:para>Specifies the name of the server to run the command against. This parameter is optional and defaults to the PDC Emulator in the domain.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
+        <maml:name>Configuration</maml:name>
+        <maml:description>
+          <maml:para>Specifies the configuration to test. You can specify one or more of the following values:</maml:para>
+          <maml:para>- `All` (all configurations)</maml:para>
+          <maml:para>- `AdfsAuditing`</maml:para>
+          <maml:para>- `AdRecycleBin`</maml:para>
+          <maml:para>- `AdvancedAuditPolicyCAs`</maml:para>
+          <maml:para>- `AdvancedAuditPolicyDCs`</maml:para>
+          <maml:para>- `CAAuditing`</maml:para>
+          <maml:para>- `ConfigurationContainerAuditing`</maml:para>
+          <maml:para>- `DeletedObjectsContainerPermission`</maml:para>
+          <maml:para>- `DomainObjectAuditing`</maml:para>
+          <maml:para>- `EntraConnectAuditing`</maml:para>
+          <maml:para>- `RemoteSAM`</maml:para>
+          <maml:para>- `DomainObjectAuditing`</maml:para>
+          <maml:para>- `NTLMAuditing`</maml:para>
+          <maml:para>- `ProcessorPerformance`</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String[]</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Domain</maml:name>
+        <maml:description>
+          <maml:para>Specifies the name of the domain to run the command against. This parameter is optional and defaults to the user's DNS domain.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>GpoNamePrefix</maml:name>
+        <maml:description>
+          <maml:para>Specifies a prefix for the Group Policy Objects (GPO) names to be searched and tested. Use this parameter for GPO naming convention.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Identity</maml:name>
+        <maml:description>
+          <maml:para>Specifies the name of the service account to use for the EntraConnectAuditing or RemoteSAM configuration. This parameter is mandatory.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Server</maml:name>
+        <maml:description>
+          <maml:para>Specifies the name of the server to run the command against. This parameter is optional and defaults to the PDC Emulator in the domain.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
+        <maml:name>Mode</maml:name>
+        <maml:description>
+          <maml:para>Specifies the mode to use. You must specify one of the following values:</maml:para>
+          <maml:para>- `Domain`: Collect settings from the Group Policy objects</maml:para>
+          <maml:para>- `LocalMachine`: Collect settings from the local machine</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes />
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>The cmdlet returns `$true` when the settings are configured as required. Otherwise, it returns `$false`.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 1 --------------------------</maml:title>
+        <dev:code>Test-MDIConfiguration -Mode LocalMachine -Configuration NTLMAuditing</dev:code>
+        <dev:remarks>
+          <maml:para>This example validates the `NTLMAuditing` configuration for the local machine.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 2 --------------------------</maml:title>
+        <dev:code>Test-MDIConfiguration -Mode Domain -Configuration NTLMAuditing -GpoNamePrefix 'CONTOSO'</dev:code>
+        <dev:remarks>
+          <maml:para>This example validates the `NTLMAuditing` configurations for the domain, in a GPO with the prefix of `CONTOSO` in its name.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 3 --------------------------</maml:title>
+        <dev:code>Test-MDIConfiguration -Mode Domain -Configuration All</dev:code>
+        <dev:remarks>
+          <maml:para>This example validates all configurations for the domain, including SACLs and GPOs.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://go.microsoft.com/fwlink/?LinkID=2248403</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Get-MDIConfiguration</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Set-MDIConfiguration</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>New-MDIConfigurationReport</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Test-MDIDSA</command:name>
+      <command:verb>Test</command:verb>
+      <command:noun>MDIDSA</command:noun>
+      <maml:description>
+        <maml:para>Validates the permissions and delegation of a Directory Service Account (DSA).</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>This function validates the permissions and delegation of a Directory Service Account (DSA) by checking its ACLs, manager assignments, and sensitive group membership.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Test-MDIDSA</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
+          <maml:name>Identity</maml:name>
+          <maml:description>
+            <maml:para>Specifies the identity of the Directory Service Account (DSA) to test.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Detailed</maml:name>
+          <maml:description>
+            <maml:para>If specified, returns detailed information about the validation status.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Domain</maml:name>
+          <maml:description>
+            <maml:para>Specifies the name of the domain to run the command against. This parameter is optional and defaults to the user's DNS domain.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Server</maml:name>
+          <maml:description>
+            <maml:para>Specifies the name of the server to run the command against. This parameter is optional and defaults to the PDC Emulator in the domain.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Detailed</maml:name>
+        <maml:description>
+          <maml:para>If specified, returns detailed information about the validation status.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Domain</maml:name>
+        <maml:description>
+          <maml:para>Specifies the name of the domain to run the command against. This parameter is optional and defaults to the user's DNS domain.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
+        <maml:name>Identity</maml:name>
+        <maml:description>
+          <maml:para>Specifies the identity of the Directory Service Account (DSA) to test.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Server</maml:name>
+        <maml:description>
+          <maml:para>Specifies the name of the server to run the command against. This parameter is optional and defaults to the PDC Emulator in the domain.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes />
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>By default, the cmdlet returns `$true` when the specified Directory Service Account (DSA) has the correct permissions and delegation.</maml:para>
+        </maml:description>
+      </command:returnValue>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.PSCustomObject</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>When you use the Detailed parameter, the cmdlet returns a custom object containing the status and details of each test.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 1 --------------------------</maml:title>
+        <dev:code>Test-MDIDSA -Identity "mdiSvc01"</dev:code>
+        <dev:remarks>
+          <maml:para>This example returns a boolean value indicating whether the specified Directory Service Account (DSA) has any issues with its permissions and delegation.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 2 --------------------------</maml:title>
+        <dev:code>Test-MDIDSA -Identity "mdiSvc01" -Detailed
+
+Test                              Status Details
+----                              ------ -------
+SensitiveGroupsMembership          False {CN=Administrators,CN=Builtin,DC=CONTOSO,DC=COM, CN=Domain Adm...
+ExplicitDelegation                 False {OU=Marketing,DC=CONTOSO,DC=COM}
+ManagerOf                          False {CN=Martin Schvartzman,CN=Users,DC=CONTOSO,DC=COM}
+DeletedObjectsContainerPermission   True {SPECIAL ACCESS, LIST CONTENTS, READ PROPERTY}</dev:code>
+        <dev:remarks>
+          <maml:para>This example returns a detailed output for the Directory Service Account (DSA) permissions and delegation validations.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://go.microsoft.com/fwlink/?LinkID=2248307</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>New-MDIDSA</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Test-MDIConfiguration</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Test-MDISensorApiConnection</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Test-MDISensorApiConnection</command:name>
+      <command:verb>Test</command:verb>
+      <command:noun>MDISensorApiConnection</command:noun>
+      <maml:description>
+        <maml:para>Validates the connection to the Defender for Identity Sensor API.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>This function validates the connection to the Defender for Identity Sensor API using the current configuration or bypassing it with custom parameters.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Test-MDISensorApiConnection</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>BypassConfiguration</maml:name>
+          <maml:description>
+            <maml:para>Switch parameter to bypass the current configuration and use custom parameters.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>ProxyCredential</maml:name>
+          <maml:description>
+            <maml:para>Specifies the credentials to use for the proxy server.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Management.Automation.PSCredential</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Management.Automation.PSCredential</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>ProxyUrl</maml:name>
+          <maml:description>
+            <maml:para>Specifies the URL of the proxy server to use for the connection.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>SensorApiUrl</maml:name>
+          <maml:description>
+            <maml:para>Specifies the URL of the Defender for Identity Sensor API to test.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>SensorType</maml:name>
+          <maml:description>
+            <maml:para>Specifies the sensor version installed, or planned to install, on the device. Accepts one of the following values:</maml:para>
+            <maml:para>- `Classic`</maml:para>
+            <maml:para>- `Unified`</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>BypassConfiguration</maml:name>
+        <maml:description>
+          <maml:para>Switch parameter to bypass the current configuration and use custom parameters.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>ProxyCredential</maml:name>
+        <maml:description>
+          <maml:para>Specifies the credentials to use for the proxy server.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.PSCredential</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.PSCredential</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>ProxyUrl</maml:name>
+        <maml:description>
+          <maml:para>Specifies the URL of the proxy server to use for the connection.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>SensorApiUrl</maml:name>
+        <maml:description>
+          <maml:para>Specifies the URL of the Defender for Identity Sensor API to test.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>SensorType</maml:name>
+        <maml:description>
+          <maml:para>Specifies the sensor version installed, or planned to install, on the device. Accepts one of the following values:</maml:para>
+          <maml:para>- `Classic`</maml:para>
+          <maml:para>- `Unified`</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes />
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>The cmdlet returns `$true` when the connection to the Defender for Identity Sensor API is successful or `$false` when it fails.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 1 --------------------------</maml:title>
+        <dev:code>Test-MDISensorApiConnection</dev:code>
+        <dev:remarks>
+          <maml:para>This example tests the connection to the Defender for Identity Sensor API using the current configuration of the installed sensor.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 2 --------------------------</maml:title>
+        <dev:code>$connectionParams = @{
+    BypassConfiguration = $true
+    SensorApiUrl        = 'https://contososensorapi.atp.azure.com'
+    SensorType          = 'Classic'
+    ProxyUrl            = 'https://myproxy.contoso.com:8080'
+    ProxyCredential     = $credential
+}
+Test-MDISensorApiConnection @connectionParams</dev:code>
+        <dev:remarks>
+          <maml:para>This example tests the connection to the Defender for Identity Sensor API using custom parameters.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://go.microsoft.com/fwlink/?linkid=2248209</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Test-MDIConfiguration</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Test-MDIDSA</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+</helpItems>

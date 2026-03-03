@@ -1,0 +1,20 @@
+---
+# Created by @ZephrFish 
+# https://zephrsec.com | https://blog.zsec.uk
+galaxy_info:
+  role_name: ad_population
+  author: "@ZephrFish"
+  description: Populate Active Directory with users, groups, OUs, and misconfigurations for lab exercises
+  version: "1.0.0"
+  license: MIT
+  min_ansible_version: "2.10"
+  platforms:
+    - name: Windows
+      versions:
+        - "2019"
+        - "2022"
+  galaxy_tags:
+    - windows
+    - activedirectory
+    - security
+dependencies: []
