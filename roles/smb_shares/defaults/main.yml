@@ -1,0 +1,16 @@
+---
+# Created by @ZephrFish 
+# https://zephrsec.com | https://blog.zsec.uk
+# smb_shares defaults
+
+# Base path for shares
+smb_shares_base: C:\Shares
+
+# Domain for ACL configuration
+smb_domain: ZSEC
+
+# Create honeypot share with auditing
+smb_create_honeypot: true
+
+# Force reconfiguration
+smb_force_reconfigure: false

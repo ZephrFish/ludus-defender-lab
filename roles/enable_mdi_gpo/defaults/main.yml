@@ -1,0 +1,16 @@
+---
+# enable_mdi_gpo defaults
+
+# Force re-application of Set-MDIConfiguration even if MDI GPOs already exist.
+# Set to true to rebuild MDI GPOs (e.g. after domain functional level upgrade).
+mdi_force_reconfigure: false
+
+# GPO name prefix used by Set-MDIConfiguration.
+# Must match the prefix used during initial configuration if reconfiguring.
+mdi_gpo_prefix: "MDI"
+
+# Offline module installation:
+# Run files/Save-MDIModule.ps1 on an internet-connected machine to pre-stage
+# the DefenderForIdentity module. The role detects files/DefenderForIdentity/
+# automatically and uses it instead of PSGallery.
+# Current PSGallery version: DefenderForIdentity 1.0.0.4

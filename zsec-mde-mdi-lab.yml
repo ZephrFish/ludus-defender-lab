@@ -1,0 +1,383 @@
+# yaml-language-server: $schema=https://docs.ludus.cloud/schemas/range-config.json
+# Created by @ZephrFish 
+# https://zephrsec.com | https://blog.zsec.uk
+#
+# zsec.local Lab — MDE/MDI Detection Lab with ADCS
+# 2 VMs, 10 vCPU, ~12 GB RAM
+#
+# VLAN layout:
+#   30  DC01  10.X.30.10   Windows DC + ADCS CA + MDI audit GPO + WEF collector
+#   30  WKS01 10.X.30.22   Windows workstation (domain member, MDE pre-staged)
+#
+# Purpose:
+#   Domain lab configured for maximum logging and telemetry, pre-staged for
+#   Microsoft Defender for Endpoint (MDE) and Microsoft Defender for Identity
+#   (MDI) deployment from your Azure subscription. Includes a fully configured
+#   ADCS installation with ESC1–ESC15 misconfigurations for detection coverage
+#   testing.
+#
+# Logging/telemetry stack:
+#   Sysmon         — deep process, network, registry, and file telemetry on both hosts
+#   WEF            — Windows Event Forwarding: WKS01 forwards → DC01 (collector)
+#   MDI GPO        — AdvancedAuditPolicyDCs, DomainObjectAuditing, NTLMAuditing on DC
+#   ASR Rules      — Attack Surface Reduction pre-staged on workstation for MDE
+#
+# ADCS misconfigurations (ESC1–ESC15) are configured for detection scenario testing.
+# MDE and MDI are NOT auto-installed — onboard both from security.microsoft.com
+# after deploying this lab.
+#
+# Required roles — install before deploying:
+#   ./roles/install-roles.sh
+#   Installs all custom roles (enable_asr, enable_mdi_gpo, mde_prereqs, etc.)
+#   and the badsectorlabs.ludus_adcs community role from Ansible Galaxy.
+#
+# Roles per VM:
+#   DC01   badsectorlabs.ludus_adcs · adcs_lab · ad_population
+#          smb_shares · enable_mdi_gpo · sysmon
+#          wef (collector) · mde_prereqs
+#   WKS01  rsat · smb_shares · sysmon · wef (forwarder)
+#          enable_asr · mde_prereqs
+#
+# Post-deploy MDE/MDI onboarding:
+#   1. MDE  — Download onboarding script from security.microsoft.com → Endpoints →
+#             Device management → Onboarding → Windows Server 2022.
+#             Run on both DC01 and WKS01.
+#   2. MDI  — In the Microsoft Defender portal, navigate to Settings → Identities →
+#             Sensors → Add sensor. Download and run the MDI sensor installer on DC01.
+#             The MDI GPO role has pre-configured the required audit policies.
+#
+# Deploy:
+#   ludus range config set -f zsec-mde-mdi-lab.yml
+#   ludus range deploy
+#
+# Post-onboarding snapshot (recommended):
+#   After MDE and MDI are onboarded and validated, take a named snapshot so you
+#   can revert to a fully-onboarded state without repeating the onboarding steps.
+#   ludus range snapshot create --name post-onboarding
+#   ludus range snapshot list
+#
+
+# ─── ENVIRONMENT SETTINGS ────────────────────────────────────────────────────
+# Edit the values below before deploying to a new environment.
+# Anchors are referenced throughout with *anchor-name.
+# Also update compound FQDNs in dns_rewrites and SPN strings (no YAML anchor
+# support for string interpolation).
+#
+x-domain:         &domain         "zsec.local"
+x-netbios:        &netbios        "ZSEC"
+x-dc-hostname:    &dc-hostname    "DC01"
+x-wks-hostname:   &wks-hostname   "WKS01"
+x-ca-name:        &ca-name        "ZSEC-CA"
+x-wef-collector:  &wef-collector  "DC01.zsec.local"
+x-timezone:       &timezone       "Europe/London"
+
+# Passwords — change all of these for new deployments
+x-admin-pass:     &admin-pass     "D0main@dmin2026"
+x-user-pass:      &user-pass      "Summer2026!"
+x-safemode-pass:  &safemode-pass  "S@feM0de2026!"
+
+# ─── SHARED MDE PREREQS ───────────────────────────────────────────────────────
+# Common settings applied to ALL hosts via <<: *mde-shared.
+# DC-only flags default to false here and are overridden per-VM below.
+#
+x-mde-shared: &mde-shared
+  mde_enable_high_performance_power_plan: false  # true on DC (MDI sensor requires it)
+  mde_enable_cloud_protection: true
+  mde_cloud_block_level: High
+  mde_submit_samples_consent: NeverSend
+  mde_enable_network_protection: true
+  mde_network_protection_mode: Enabled
+  mde_enforce_tls12: true
+  mde_set_telemetry_level: true
+  mde_telemetry_level: 2
+  mde_ensure_diagtrack: true
+  mde_enable_pua_protection: true
+  mde_set_controlled_folder_access: true
+  mde_controlled_folder_access: AuditMode
+  mde_enable_exploit_protection: true
+  mde_enable_firewall: true
+  mde_fix_disable_antispyware: true
+  mde_enable_ps_scriptblock_logging: true
+  mde_enable_ps_module_logging: true
+  mde_enable_ps_transcription: true
+  mde_ps_transcription_path: "C:\\PSTranscripts"
+  mde_security_log_size_mb: 1024
+  mde_system_log_size_mb: 512
+  mde_application_log_size_mb: 512
+  mde_enable_additional_log_channels: true
+  mde_defender_log_size_mb: 64
+  mde_ps_operational_log_size_mb: 128
+  mde_wmi_log_size_mb: 64
+  mde_task_log_size_mb: 64
+  mde_dns_log_size_mb: 32
+  mde_enable_process_cmdline_audit: true
+  mde_enable_advanced_audit_policy: true
+  mde_enable_ntlm_auditing: false          # DC-only — override on DC
+  mde_enable_adcs_ca_auditing: false       # DC/CA-only — override on DC
+  mde_update_signatures: true
+  mde_verify_defender_services: true
+  mde_ensure_health_services: true
+  mde_configure_restrict_remote_sam: true
+  mde_enable_ldap_diagnostic_logging: false  # DC-only — override on DC
+  mde_run_readiness_check: true
+  mde_enable_lsa_hardening: true
+  mde_lsa_run_as_ppl: 1
+  mde_lm_compat_level: 5
+  mde_wdigest_use_logon_cred: 0
+  mde_disable_restricted_admin: 0
+  mde_configure_scanning_fidelity: true
+  mde_enable_file_hash_computation: true
+  mde_disable_email_scanning: false
+  mde_disable_removable_drive_scanning: false
+  mde_signature_update_interval: 1
+  mde_enable_firewall_logging: true
+  mde_firewall_log_size_kb: 32767
+  mde_enable_extended_audit_subcategories: true
+  mde_enable_dc_log_channels: false        # DC-only — override on DC
+
+ludus:
+
+  # ─── DC01 — Domain Controller + ADCS CA + MDI + WEF Collector ───────────────
+  - vm_name: "{{ range_id }}-internal-dc01"
+    hostname: *dc-hostname
+    template: win2022-server-x64-template
+    vlan: 30
+    ip_last_octet: 10
+    ram_gb: 8
+    cpus: 4
+    windows:
+      sysprep: true
+    domain:
+      fqdn: *domain
+      role: primary-dc
+    dns_rewrites:
+      - "DC01.zsec.local"
+      - "dc.zsec.local"
+      - "ca.zsec.local"
+      - "pki.zsec.local"
+      - "wef.zsec.local"
+    roles:
+      - badsectorlabs.ludus_adcs
+      - adcs_lab
+      - ad_population
+      - smb_shares
+      - enable_mdi_gpo
+      - sysmon
+      - wef
+      - mde_prereqs
+    role_vars:
+      # ── ADCS ──────────────────────────────────────────────────────────────────
+      ludus_adcs_ca_common_name: *ca-name
+      adcs_domain: *domain
+      adcs_configure_dc_settings: true
+      adcs_enable_web_enrollment: true
+      adcs_test_user: jsmith
+
+      # ── AD Population ─────────────────────────────────────────────────────────
+      domain_name: *domain
+      domain_netbios: *netbios
+      domain_admin_password: *admin-pass
+      organizational_units:
+        - name: Staff
+          description: "Lab staff accounts"
+          sub_ous:
+            - IT
+            - Finance
+            - HR
+        - name: Service Accounts
+          description: "Service account OU"
+        - name: Servers
+          description: "Server OU"
+        - name: Workstations
+          description: "Workstation OU"
+      security_groups:
+        - name: IT-Admins
+          description: "IT Department Administrators"
+        - name: Server-Operators
+          description: "Server management group"
+        - name: Backup-Operators
+          description: "Backup service group"
+        - name: MDI-Excluded
+          description: "Accounts excluded from MDI monitoring (honeytoken bait)"
+      standard_users:
+        - first: John
+          last: Smith
+          username: jsmith
+          password: *user-pass
+          department: IT
+          groups:
+            - IT-Admins
+        - first: Alice
+          last: Brown
+          username: abrown
+          password: "Welcome2026!"
+          department: IT
+          groups:
+            - IT-Admins
+        - first: Bob
+          last: Wilson
+          username: bwilson
+          password: "Welcome2026!"
+          department: IT
+          groups:
+            - IT-Admins
+        - first: Carol
+          last: Davis
+          username: cdavis
+          password: "Welcome2026!"
+          department: IT
+          groups:
+            - IT-Admins
+            - Server-Operators
+        - first: Dave
+          last: Miller
+          username: dmiller
+          password: "Welcome2026!"
+          department: IT
+          groups:
+            - Server-Operators
+        - first: Sarah
+          last: Connor
+          username: sconnor
+          password: "Welcome2026!"
+          department: Finance
+        - first: Mike
+          last: Chen
+          username: mchen
+          password: "Password123!"
+          department: HR
+        - first: Tanya
+          last: Lee
+          username: tlee
+          password: "Welcome2026!"
+          department: IT
+        - first: Maria
+          last: Garcia
+          username: mgarcia
+          password: "Welcome2026!"
+          department: HR
+        - first: James
+          last: OBrien
+          username: jobrien
+          password: "Welcome2026!"
+          department: Finance
+        - first: Lisa
+          last: Nakamura
+          username: lnakamura
+          password: "Welcome2026!"
+          department: IT
+          groups:
+            - IT-Admins
+      kerberoastable_accounts:
+        - name: svc_backup
+          spn: "backup/DC01.zsec.local"
+          password: "SvcBackup2026!"
+        - name: svc_sql
+          spn: "MSSQLSvc/DC01.zsec.local:1433"
+          password: "SqlService2026!"
+      asrep_roastable_accounts:
+        - name: svc_legacy
+          password: "Legacy2026!"
+      high_value_accounts:
+        - name: svc_deploy
+          password: "D3pl0y@utomation!"
+          groups:
+            - Backup-Operators
+        # MDI Directory Service Account — read access to all domain objects.
+        # Assign this account in the MDI sensor configuration after onboarding.
+        - name: svc_mdi
+          password: "MdiSensor2026!@"
+          groups: []
+
+      # ── WEF — Collector mode on DC ────────────────────────────────────────────
+      wef_mode: collector
+      wef_create_gpo: true
+      wef_force_reconfigure: false
+
+      # ── Sysmon ────────────────────────────────────────────────────────────────
+      sysmon_install_dir: "C:\\Tools\\Sysmon"
+      sysmon_force_reinstall: false
+
+      # ── MDE Prerequisites — shared base + DC-specific overrides ──────────────
+      <<: *mde-shared
+      mde_enable_high_performance_power_plan: true  # MDI sensor requires high performance
+      mde_enable_ntlm_auditing: true                # Event 8004 — DC/CA only
+      mde_enable_adcs_ca_auditing: true             # ADCS CA audit — DC/CA only
+      mde_enable_ldap_diagnostic_logging: true      # Event 1644 for MDI LDAP recon — DC only
+      mde_ldap_diagnostic_level: 5
+      mde_enable_dc_log_channels: true              # DFS/DNS/NTLM op logs — DC only
+      mde_ds_log_size_mb: 256
+      mde_ntlm_op_log_size_mb: 64
+
+    testing:
+      snapshot: true
+      block_internet: false
+
+  # ─── WKS01 — Domain Workstation + MDE pre-staged ─────────────────────────────
+  - vm_name: "{{ range_id }}-internal-wks01"
+    hostname: *wks-hostname
+    template: win2022-server-x64-template
+    vlan: 30
+    ip_last_octet: 22
+    ram_gb: 4
+    cpus: 4
+    windows:
+      sysprep: true
+      install_additional_tools: true
+    domain:
+      fqdn: *domain
+      role: member
+    dns_rewrites:
+      - "WKS01.zsec.local"
+    roles:
+      - rsat
+      - smb_shares
+      - sysmon
+      - wef
+      - enable_asr
+      - mde_prereqs
+    role_vars:
+      # ── SMB Shares ────────────────────────────────────────────────────────────
+      domain_name: *domain
+      smb_domain: *netbios
+      smb_shares_base: "C:\\Shares"
+      smb_create_honeypot: true
+
+      # ── WEF — Forwarder pointing to DC01 ──────────────────────────────────────
+      wef_mode: forwarder
+      wef_collector_server: *wef-collector
+      wef_force_reconfigure: false
+
+      # ── Sysmon ────────────────────────────────────────────────────────────────
+      sysmon_install_dir: "C:\\Tools\\Sysmon"
+      sysmon_force_reinstall: false
+
+      # ── MDE Prerequisites — shared base (workstation profile) ─────────────────
+      <<: *mde-shared
+
+    testing:
+      snapshot: true
+      block_internet: false
+
+network:
+  inter_vlan_default: REJECT
+  rules:
+    - name: "Internal AD mesh"
+      vlan_src: 30
+      vlan_dst: 30
+      protocol: all
+      ports: all
+      action: ACCEPT
+
+defaults:
+  snapshot_with_RAM: true
+  stale_hours: 0
+  enable_dynamic_wallpaper: false
+  ad_domain_functional_level: WinThreshold
+  ad_forest_functional_level: WinThreshold
+  ad_domain_admin: domainadmin
+  ad_domain_admin_password: *admin-pass
+  ad_domain_user: domainuser
+  ad_domain_user_password: *user-pass
+  ad_domain_safe_mode_password: *safemode-pass
+  timezone: *timezone

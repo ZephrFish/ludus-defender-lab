@@ -1,0 +1,42 @@
+# Editor and IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Claude Code
+.claude/
+
+# Ansible
+*.retry
+.ansible/
+ansible.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+.venv/
+venv/
+*.egg-info/
+
+# Secrets / local overrides
+*.vault
+vault_pass.txt
+secrets.yml
+.env.*
+*.local.yml
+
+# Logs and temp
+*.log
+tmp/
+.tmp/
+
+# OS
+.DS_Store
+ehthumbs.db
+Desktop.ini

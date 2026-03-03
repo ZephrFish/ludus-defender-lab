@@ -1,0 +1,24 @@
+---
+# Created by @ZephrFish 
+# https://zephrsec.com | https://blog.zsec.uk
+# rsat - Install RSAT features on Windows domain members
+# Target: Windows Server / Workstation domain members (e.g. WKS01)
+
+- name: Install RSAT - Active Directory tools
+  ansible.windows.win_feature:
+    name: RSAT-AD-Tools
+    state: present
+    include_sub_features: true
+  register: rsat_ad_result
+
+- name: Install RSAT - Certificate Services tools
+  ansible.windows.win_feature:
+    name: RSAT-ADCS
+    state: present
+  register: rsat_adcs_result
+
+- name: Reboot if RSAT install requires it
+  ansible.windows.win_reboot:
+    reboot_timeout: 300
+    post_reboot_delay: 30
+  when: rsat_ad_result.reboot_required or rsat_adcs_result.reboot_required

@@ -1,0 +1,456 @@
+---
+# Created by @ZephrFish 
+# https://zephrsec.com | https://blog.zsec.uk
+# ad_population - Populate Active Directory for lab exercises
+#
+# Creates: OUs, Security Groups, Standard Users, Service Accounts,
+#          Kerberoastable/ASREProastable accounts, ACL misconfigs,
+#          Delegation misconfigs
+
+# =============================================================================
+# Pre-flight assertions
+# =============================================================================
+
+- name: Assert required variables
+  ansible.builtin.assert:
+    that:
+      - domain_name is defined
+      - domain_name | length > 0
+      - domain_admin_password is defined
+      - domain_admin_password | length > 0
+      - ansible_host is defined
+      - inventory_hostname is defined
+    fail_msg: "Required variables not set: domain_name and domain_admin_password must be defined"
+    success_msg: "Pre-flight check passed"
+
+# =============================================================================
+# Ensure C:\Tools\ exists (required for summary file and log tasks)
+# =============================================================================
+
+- name: Ensure C:\Tools directory exists
+  ansible.windows.win_file:
+    path: C:\Tools
+    state: directory
+
+# =============================================================================
+# Organizational Units
+# =============================================================================
+
+- name: Create and populate Active Directory
+  block:
+
+    - name: Create Organizational Units
+      ansible.windows.win_powershell:
+        script: |
+          Import-Module ActiveDirectory
+          $domainDN = (Get-ADDomain).DistinguishedName
+
+          $ous = @(
+          {% for ou in organizational_units %}
+            @{
+              Name = "{{ ou.name }}"
+              Description = "{{ ou.description | default('') }}"
+              SubOUs = @({% for sub in ou.sub_ous | default([]) %}"{{ sub }}"{% if not loop.last %}, {% endif %}{% endfor %})
+            }
+          {% endfor %}
+          )
+
+          foreach ($ou in $ous) {
+              $ouPath = "OU=$($ou.Name),$domainDN"
+              try {
+                  Get-ADOrganizationalUnit -Identity $ouPath -ErrorAction Stop | Out-Null
+                  Write-Output "[=] OU exists: $($ou.Name)"
+              } catch {
+                  New-ADOrganizationalUnit -Name $ou.Name -Description $ou.Description -Path $domainDN -ProtectedFromAccidentalDeletion $false
+                  Write-Output "[+] Created OU: $($ou.Name)"
+              }
+
+              # Create sub-OUs
+              foreach ($sub in $ou.SubOUs) {
+                  $subPath = "OU=$sub,$ouPath"
+                  try {
+                      Get-ADOrganizationalUnit -Identity $subPath -ErrorAction Stop | Out-Null
+                      Write-Output "[=] Sub-OU exists: $sub"
+                  } catch {
+                      New-ADOrganizationalUnit -Name $sub -Path $ouPath -ProtectedFromAccidentalDeletion $false
+                      Write-Output "[+] Created sub-OU: $sub under $($ou.Name)"
+                  }
+              }
+          }
+      when: organizational_units | length > 0
+
+# =============================================================================
+# Security Groups
+# =============================================================================
+
+    - name: Create Security Groups
+      ansible.windows.win_powershell:
+        script: |
+          Import-Module ActiveDirectory
+
+          $groups = @(
+          {% for group in security_groups %}
+            @{ Name = "{{ group.name }}"; Description = "{{ group.description | default('') }}" }
+          {% endfor %}
+          )
+
+          foreach ($g in $groups) {
+              try {
+                  Get-ADGroup -Identity $g.Name -ErrorAction Stop | Out-Null
+                  Write-Output "[=] Group exists: $($g.Name)"
+              } catch {
+                  New-ADGroup -Name $g.Name -GroupScope Global -GroupCategory Security -Description $g.Description
+                  Write-Output "[+] Created group: $($g.Name)"
+              }
+          }
+      when: security_groups | length > 0
+
+# =============================================================================
+# Standard Users
+# =============================================================================
+
+    - name: Create Standard Users
+      ansible.windows.win_powershell:
+        script: |
+          Import-Module ActiveDirectory
+          $domain = "{{ domain_name }}"
+
+          $users = @(
+          {% for user in standard_users %}
+            @{
+              First = "{{ user.first }}"
+              Last = "{{ user.last }}"
+              Username = "{{ user.username }}"
+              Department = "{{ user.department | default('') }}"
+              Password = "{{ user.password }}"
+              Groups = @({% for g in user.groups | default([]) %}"{{ g }}"{% if not loop.last %}, {% endif %}{% endfor %})
+            }
+          {% endfor %}
+          )
+
+          foreach ($u in $users) {
+              try {
+                  Get-ADUser -Identity $u.Username -ErrorAction Stop | Out-Null
+                  Write-Output "[=] User exists: $($u.Username)"
+              } catch {
+                  New-ADUser -Name "$($u.First) $($u.Last)" `
+                      -GivenName $u.First -Surname $u.Last `
+                      -SamAccountName $u.Username `
+                      -UserPrincipalName "$($u.Username)@$domain" `
+                      -AccountPassword (ConvertTo-SecureString $u.Password -AsPlainText -Force) `
+                      -Enabled $true -PasswordNeverExpires $true `
+                      -Department $u.Department `
+                      -Description "Lab user - $($u.Department)"
+                  Write-Output "[+] Created user: $($u.Username)"
+              }
+
+              foreach ($group in $u.Groups) {
+                  try {
+                      Add-ADGroupMember -Identity $group -Members $u.Username -ErrorAction Stop
+                      Write-Output "[+] Added $($u.Username) to $group"
+                  } catch {
+                      Write-Output "[=] $($u.Username) already in $group (or group missing)"
+                  }
+              }
+          }
+      when: standard_users | length > 0
+
+# =============================================================================
+# Kerberoastable Accounts
+# =============================================================================
+
+    - name: Create Kerberoastable Service Accounts
+      ansible.windows.win_powershell:
+        script: |
+          Import-Module ActiveDirectory
+          $domain = "{{ domain_name }}"
+
+          $accounts = @(
+          {% for acct in kerberoastable_accounts %}
+            @{
+              Name = "{{ acct.name }}"
+              SPN = "{{ acct.spn }}"
+              Password = "{{ acct.password }}"
+            }
+          {% endfor %}
+          )
+
+          foreach ($a in $accounts) {
+              try {
+                  Get-ADUser -Identity $a.Name -ErrorAction Stop | Out-Null
+                  Write-Output "[=] Account exists: $($a.Name)"
+              } catch {
+                  New-ADUser -Name $a.Name -SamAccountName $a.Name `
+                      -UserPrincipalName "$($a.Name)@$domain" `
+                      -AccountPassword (ConvertTo-SecureString $a.Password -AsPlainText -Force) `
+                      -Enabled $true -PasswordNeverExpires $true `
+                      -Description "Service account (Kerberoastable)" `
+                      -ServicePrincipalNames @($a.SPN)
+                  Write-Output "[+] Created Kerberoastable account: $($a.Name) with SPN: $($a.SPN)"
+              }
+          }
+      when: kerberoastable_accounts | length > 0
+
+# =============================================================================
+# AS-REP Roastable Accounts
+# =============================================================================
+
+    - name: Create AS-REP Roastable Accounts
+      ansible.windows.win_powershell:
+        script: |
+          Import-Module ActiveDirectory
+          $domain = "{{ domain_name }}"
+
+          $accounts = @(
+          {% for acct in asrep_roastable_accounts %}
+            @{ Name = "{{ acct.name }}"; Password = "{{ acct.password }}" }
+          {% endfor %}
+          )
+
+          foreach ($a in $accounts) {
+              try {
+                  $user = Get-ADUser -Identity $a.Name -ErrorAction Stop
+                  Write-Output "[=] Account exists: $($a.Name)"
+              } catch {
+                  New-ADUser -Name $a.Name -SamAccountName $a.Name `
+                      -UserPrincipalName "$($a.Name)@$domain" `
+                      -AccountPassword (ConvertTo-SecureString $a.Password -AsPlainText -Force) `
+                      -Enabled $true -PasswordNeverExpires $true `
+                      -Description "Legacy account (AS-REP roastable)"
+                  Write-Output "[+] Created account: $($a.Name)"
+              }
+              # Disable Kerberos pre-authentication
+              Set-ADAccountControl -Identity $a.Name -DoesNotRequirePreAuth $true
+              Write-Output "[+] Disabled pre-auth for: $($a.Name)"
+          }
+      when: asrep_roastable_accounts | length > 0
+
+# =============================================================================
+# High-Value Accounts
+# =============================================================================
+
+    - name: Create High-Value Target Accounts
+      ansible.windows.win_powershell:
+        script: |
+          Import-Module ActiveDirectory
+          $domain = "{{ domain_name }}"
+
+          $accounts = @(
+          {% for acct in high_value_accounts %}
+            @{
+              Name = "{{ acct.name }}"
+              Password = "{{ acct.password }}"
+              Groups = @({% for g in acct.groups | default([]) %}"{{ g }}"{% if not loop.last %}, {% endif %}{% endfor %})
+              UnconstrainedDelegation = {{ acct.unconstrained_delegation | default(false) | ternary('$true', '$false') }}
+              ConstrainedDelegationTarget = "{{ acct.constrained_delegation_target | default('') }}"
+            }
+          {% endfor %}
+          )
+
+          foreach ($a in $accounts) {
+              try {
+                  Get-ADUser -Identity $a.Name -ErrorAction Stop | Out-Null
+                  Write-Output "[=] Account exists: $($a.Name)"
+              } catch {
+                  New-ADUser -Name $a.Name -SamAccountName $a.Name `
+                      -UserPrincipalName "$($a.Name)@$domain" `
+                      -AccountPassword (ConvertTo-SecureString $a.Password -AsPlainText -Force) `
+                      -Enabled $true -PasswordNeverExpires $true `
+                      -Description "High-value service account"
+                  Write-Output "[+] Created account: $($a.Name)"
+              }
+
+              foreach ($group in $a.Groups) {
+                  try {
+                      Add-ADGroupMember -Identity $group -Members $a.Name -ErrorAction Stop
+                      Write-Output "[+] Added $($a.Name) to $group"
+                  } catch {
+                      Write-Output "[=] $($a.Name) already in $group"
+                  }
+              }
+
+              if ($a.UnconstrainedDelegation) {
+                  Set-ADAccountControl -Identity $a.Name -TrustedForDelegation $true
+                  Write-Output "[+] Enabled unconstrained delegation for: $($a.Name)"
+              }
+
+              if ($a.ConstrainedDelegationTarget -ne '') {
+                  Set-ADUser -Identity $a.Name -Add @{'msDS-AllowedToDelegateTo' = @($a.ConstrainedDelegationTarget)}
+                  Set-ADAccountControl -Identity $a.Name -TrustedToAuthForDelegation $true
+                  Write-Output "[+] Configured constrained delegation for: $($a.Name) -> $($a.ConstrainedDelegationTarget)"
+              }
+          }
+      when: high_value_accounts | length > 0
+
+# =============================================================================
+# ACL Misconfigurations
+# =============================================================================
+
+    - name: Configure ACL Misconfigurations
+      ansible.windows.win_powershell:
+        script: |
+          Import-Module ActiveDirectory
+
+          $misconfigs = @(
+          {% for acl in acl_misconfigs %}
+            @{
+              SourceGroup = "{{ acl.source_group }}"
+              Target = "{{ acl.target }}"
+              Rights = "{{ acl.rights }}"
+            }
+          {% endfor %}
+          )
+
+          foreach ($m in $misconfigs) {
+              try {
+                  $targetObj = Get-ADGroup -Identity $m.Target -ErrorAction Stop
+                  $targetDN = $targetObj.DistinguishedName
+                  $sourceGroup = Get-ADGroup -Identity $m.SourceGroup -ErrorAction Stop
+                  $sourceSID = $sourceGroup.SID
+
+                  $acl = Get-Acl "AD:\$targetDN"
+                  $identity = [System.Security.Principal.IdentityReference]$sourceSID
+                  $adRights = [System.DirectoryServices.ActiveDirectoryRights]$m.Rights
+                  $ace = New-Object System.DirectoryServices.ActiveDirectoryAccessRule(
+                      $identity, $adRights, "Allow"
+                  )
+                  $acl.AddAccessRule($ace)
+                  Set-Acl "AD:\$targetDN" $acl
+                  Write-Output "[+] Granted $($m.Rights) on $($m.Target) to $($m.SourceGroup)"
+              } catch {
+                  Write-Output "[!] Failed to set ACL: $($_.Exception.Message)"
+              }
+          }
+      when:
+        - enable_acl_misconfigs | default(false)
+        - acl_misconfigs | length > 0
+
+  rescue:
+    - name: Log AD population failure
+      ansible.windows.win_powershell:
+        script: Add-Content -Path 'C:\Windows\Temp\zsec-ansible.log' -Value "FAILED ad_population {{ ansible_date_time.date | default('unknown') }} on {{ inventory_hostname }}" -ErrorAction SilentlyContinue
+      ignore_errors: true
+
+    - name: Capture Windows event log on failure
+      ansible.windows.win_powershell:
+        script: "Get-EventLog -LogName Application -Newest 20 | Format-List | Out-String"
+      register: win_event_log
+      ignore_errors: true
+
+    - name: Show event log
+      ansible.builtin.debug:
+        msg: "{{ win_event_log.output | default(['No logs available']) }}"
+
+    - name: Capture AD user count on failure
+      ansible.windows.win_powershell:
+        script: "Get-ADUser -Filter * | Measure-Object | Select-Object -ExpandProperty Count"
+      register: ad_user_count
+      ignore_errors: true
+
+    - name: Show AD user count
+      ansible.builtin.debug:
+        msg: "AD user count at time of failure: {{ ad_user_count.output | default(['unavailable']) }}"
+
+    - name: Fail with clear message
+      ansible.builtin.fail:
+        msg: "AD population FAILED on {{ inventory_hostname }}"
+
+# =============================================================================
+# Summary
+# =============================================================================
+
+- name: Display AD Population Summary
+  ansible.builtin.debug:
+    msg: |
+      AD Population Complete
+      ======================
+      Domain: {{ domain_name }}
+      OUs created: {{ organizational_units | length }}
+      Security groups: {{ security_groups | length }}
+      Standard users: {{ standard_users | length }}
+      Kerberoastable accounts: {{ kerberoastable_accounts | length }}
+      AS-REP roastable accounts: {{ asrep_roastable_accounts | length }}
+      High-value accounts: {{ high_value_accounts | length }}
+      ACL misconfigs: {{ acl_misconfigs | default([]) | length if enable_acl_misconfigs | default(false) else 0 }}
+
+- name: Save AD population summary
+  ansible.windows.win_copy:
+    dest: "C:\\Tools\\ad-population-summary.txt"
+    content: |
+      ═══════════════════════════════════════════════════════════════
+      ZSEC Active Directory Population Summary — OPERATOR USE ONLY
+      Domain: {{ domain_name | default('zsec.local') }}
+      ═══════════════════════════════════════════════════════════════
+
+      ORGANIZATIONAL UNITS ({{ organizational_units | length }} configured)
+      ────────────────────
+      {% for ou in organizational_units %}
+      OU={{ ou.name }},DC={{ domain_name | replace('.', ',DC=') }}
+      {% for sub in ou.sub_ous | default([]) %}
+        OU={{ sub }},OU={{ ou.name }},DC={{ domain_name | replace('.', ',DC=') }}
+      {% endfor %}
+      {% endfor %}
+
+      DOMAIN ADMIN
+      ────────────
+      Administrator / {{ domain_admin_password | default('(see defaults)') }}
+
+      STANDARD USERS ({{ standard_users | length }})
+      ────────────────────
+      {% for u in standard_users %}
+      {{ u.username }}: {{ u.password }}  [{{ u.department | default('') }}]{% if u.groups | default([]) %} — groups: {{ u.groups | join(', ') }}{% endif %}
+
+      {% endfor %}
+
+      KERBEROASTABLE ACCOUNTS ({{ kerberoastable_accounts | length }})
+      ──────────────────────────────
+      {% for a in kerberoastable_accounts %}
+      {{ a.name }}: {{ a.password }}  (SPN: {{ a.spn }})
+      {% endfor %}
+
+      AS-REP ROASTABLE ACCOUNTS ({{ asrep_roastable_accounts | length }})
+      ─────────────────────────────────
+      {% for a in asrep_roastable_accounts %}
+      {{ a.name }}: {{ a.password }}  (pre-auth disabled)
+      {% endfor %}
+
+      HIGH-VALUE ACCOUNTS ({{ high_value_accounts | length }})
+      ───────────────────────
+      {% for a in high_value_accounts %}
+      {{ a.name }}: {{ a.password }}{% if a.groups | default([]) %} — groups: {{ a.groups | join(', ') }}{% endif %}
+
+      {% endfor %}
+
+      ATTACK SCENARIOS
+      ────────────────
+      1. Kerberoasting:  GetUserSPNs.py {{ domain_name }}/USER:PASS -dc-ip DC_IP
+      2. AS-REP Roasting: GetNPUsers.py {{ domain_name }}/ -usersfile users.txt -dc-ip DC_IP
+      3. DCSync:         secretsdump.py {{ domain_name }}/Administrator:PASS@DC_IP
+      4. Share creds:    crackmapexec smb DC_IP -u USER -p PASS --shares
+      ═══════════════════════════════════════════════════════════════
+
+- name: Restrict access to AD population summary
+  ansible.windows.win_acl:
+    path: C:\Tools\ad-population-summary.txt
+    user: Administrators
+    rights: FullControl
+    type: allow
+    state: present
+  failed_when: false
+
+- name: Show AD population status
+  ansible.builtin.debug:
+    msg:
+      - "════════════════════════════════════════════"
+      - "  ad_population — Complete"
+      - "════════════════════════════════════════════"
+      - "  Domain        : {{ domain_name | default('zsec.local') }}"
+      - "  OUs Created   : IT, HR, Finance, Management, ServiceAccounts"
+      - "  Accounts      : Standard, Kerberoastable, AS-REP, High-value"
+      - "  Summary File  : C:\\Tools\\ad-population-summary.txt"
+      - "════════════════════════════════════════════"
+
+- name: Log successful deployment
+  ansible.windows.win_powershell:
+    script: Add-Content -Path 'C:\Windows\Temp\zsec-ansible.log' -Value "OK ad_population on {{ inventory_hostname }}" -ErrorAction SilentlyContinue
+  ignore_errors: true

@@ -1,0 +1,63 @@
+---
+# Created by @ZephrFish 
+# https://zephrsec.com | https://blog.zsec.uk
+galaxy_info:
+  role_name: adcs_lab
+  author: "@ZephrFish"
+  description: Configure ADCS for ESC1-16 attack path training
+  version: "1.0.0"
+  license: MIT
+  min_ansible_version: "2.10"
+  platforms:
+    - name: Windows
+      versions:
+        - 2019
+        - 2022
+
+  galaxy_tags:
+    - security
+    - adcs
+    - activedirectory
+    - pentest
+    - training
+
+dependencies: []
+
+# Role Information
+# ================
+# This role configures Active Directory Certificate Services (ADCS) with
+# comprehensive ESC1-16 vulnerabilities for offensive security training.
+#
+# ESC Vulnerabilities Configured:
+#   ESC1  - Misconfigured Certificate Templates (enrollee supplies SAN)
+#   ESC2  - Any Purpose EKU / No EKU templates
+#   ESC3  - Enrollment Agent Templates (request on behalf of)
+#   ESC4  - Vulnerable Template ACLs (GenericWrite on templates)
+#   ESC5  - Vulnerable PKI Object Access Control (container ACLs)
+#   ESC6  - EDITF_ATTRIBUTESUBJECTALTNAME2 flag enabled
+#   ESC7  - Vulnerable CA ACLs (ManageCA/ManageCertificates)
+#   ESC8  - NTLM Relay to AD CS HTTP Endpoints (/certsrv)
+#   ESC9  - No Security Extension (StrongCertificateBindingEnforcement=0)
+#   ESC10 - Weak Certificate Mappings (CertificateMappingMethods)
+#   ESC11 - IF_ENFORCEENCRYPTICERTREQUEST disabled (unencrypted RPC)
+#   ESC12 - Shell Access to CA (manual/simulated with YubiHSM)
+#   ESC13 - Issuance Policy with OID Group Link to Domain Admins
+#   ESC14 - Weak Explicit Mappings (altSecurityIdentities)
+#   ESC15 - Application Policy EKConstraint bypass (Schema V1)
+#
+# Prerequisites:
+#   - Windows Server 2019/2022 with ADCS role installed
+#   - Domain-joined to zsec.local
+#   - AD users created (jsmith, svc_backup)
+#
+# Usage:
+#   # Run on CA server (DC01.zsec.local)
+#   ansible-playbook -i inventory adcs-lab.yml --limit DC01
+#
+#   # Include DC configuration for ESC9/ESC10
+#   ansible-playbook -i inventory adcs-lab.yml -e adcs_configure_dc_settings=true
+#
+# References:
+#   - https://posts.specterops.io/certified-pre-owned-d95910965cd2
+#   - https://github.com/ly4k/Certipy
+#   - https://research.ifcr.dk/certipy-4-0-esc9-esc10-bloodhound-gui

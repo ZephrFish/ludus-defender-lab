@@ -1,0 +1,18 @@
+---
+# Created by @ZephrFish 
+# https://zephrsec.com | https://blog.zsec.uk
+domain_name: "zsec.local"
+domain: "zsec.local"       # alias used in credentials file output — keep in sync with domain_name
+domain_netbios: "ZSEC"
+
+organizational_units: []
+security_groups: []
+standard_users: []
+kerberoastable_accounts: []
+asrep_roastable_accounts: []
+high_value_accounts: []
+
+enable_acl_misconfigs: false
+acl_misconfigs: []
+enable_delegation_misconfigs: false
+enable_gpo_misconfigs: false

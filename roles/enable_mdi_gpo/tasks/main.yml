@@ -1,0 +1,136 @@
+---
+# enable_mdi_gpo — apply MDI audit GPO configuration on the domain controller.
+#
+# Module installation strategy (in priority order):
+#   1. Offline  — copy DefenderForIdentity/ from role files/ if pre-staged by Save-MDIModule.ps1
+#   2. Online   — install from PSGallery (DC needs internet access)
+#
+# To pre-stage the module and avoid the internet dependency:
+#   cd roles/enable_mdi_gpo/files/
+#   .\Save-MDIModule.ps1     # run once on any internet-connected machine
+# The role will detect the resulting DefenderForIdentity/ directory automatically.
+
+- name: Apply Microsoft Defender for Identity GPO audit configuration
+  block:
+
+    - name: Check if MDI GPO already applied
+      ansible.windows.win_powershell:
+        script: |
+          Import-Module GroupPolicy -ErrorAction SilentlyContinue
+          $gpos = Get-GPO -All -ErrorAction SilentlyContinue |
+                  Where-Object { $_.DisplayName -like '{{ mdi_gpo_prefix }}*' }
+          if ($gpos) { Write-Output "MDI_GPO_EXISTS" } else { Write-Output "MDI_GPO_MISSING" }
+      register: mdi_gpo_check
+      changed_when: false
+      failed_when: false
+
+    - name: Check if DefenderForIdentity module is already installed on target
+      ansible.windows.win_powershell:
+        script: |
+          if (Get-Module -ListAvailable -Name DefenderForIdentity -ErrorAction SilentlyContinue) {
+            Write-Output "MODULE_PRESENT"
+          } else {
+            Write-Output "MODULE_MISSING"
+          }
+      register: mdi_module_check
+      changed_when: false
+      failed_when: false
+
+    # Always check controller — stat on localhost is instant and avoids undefined-variable
+    # issues in later when: conditions when the check task would otherwise be skipped.
+    - name: Check for pre-staged DefenderForIdentity module on Ansible controller
+      ansible.builtin.stat:
+        path: "{{ role_path }}/files/DefenderForIdentity"
+      register: mdi_module_staged
+      delegate_to: localhost
+      changed_when: false
+
+    - name: Copy pre-staged DefenderForIdentity module to target (offline install)
+      ansible.windows.win_copy:
+        src: "DefenderForIdentity"
+        dest: "C:\\Program Files\\WindowsPowerShell\\Modules\\"
+      register: mdi_module_copy
+      when:
+        - "'MODULE_MISSING' in (mdi_module_check.output | join(''))"
+        - mdi_module_staged.stat.exists
+
+    - name: Install DefenderForIdentity via PSGallery (online fallback)
+      ansible.windows.win_powershell:
+        script: |
+          $ErrorActionPreference = "Stop"
+          if ((Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue).InstallationPolicy -ne 'Trusted') {
+            Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          }
+          Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$false | Out-Null
+          Install-Module -Name DefenderForIdentity -Force -SkipPublisherCheck -Confirm:$false -ErrorAction Stop
+          Write-Output "INSTALLED"
+      register: mdi_module_install
+      changed_when: "'INSTALLED' in (mdi_module_install.output | join(''))"
+      when:
+        - "'MODULE_MISSING' in (mdi_module_check.output | join(''))"
+        - not mdi_module_staged.stat.exists
+
+    - name: Configure MDI audit GPOs via Set-MDIConfiguration
+      ansible.windows.win_powershell:
+        script: |
+          $ErrorActionPreference = "Stop"
+          Import-Module ActiveDirectory    -ErrorAction Stop
+          Import-Module DefenderForIdentity -ErrorAction Stop
+          Set-MDIConfiguration -Mode Domain -Configuration All -GpoNamePrefix "{{ mdi_gpo_prefix }}" -Confirm:$false
+          Write-Output "MDI_CONFIGURED"
+      register: mdi_configure_result
+      changed_when: "'MDI_CONFIGURED' in (mdi_configure_result.output | join(''))"
+      when: >-
+        'MDI_GPO_MISSING' in (mdi_gpo_check.output | join('')) or
+        mdi_force_reconfigure | default(false)
+
+    - name: Force Group Policy update on DC
+      ansible.windows.win_powershell:
+        script: gpupdate /force /wait:0
+      changed_when: false
+      when: mdi_configure_result is changed
+
+  rescue:
+    - name: Log MDI GPO configuration failure
+      ansible.windows.win_powershell:
+        script: |
+          Add-Content -Path 'C:\Windows\Temp\zsec-ansible.log' `
+            -Value "FAILED enable_mdi_gpo on {{ inventory_hostname }}: $($Error[0])" `
+            -ErrorAction SilentlyContinue
+      ignore_errors: true
+
+    - name: Show MDI configuration failure details
+      ansible.builtin.debug:
+        msg:
+          - "MDI GPO configuration FAILED on {{ inventory_hostname }}"
+          - "Common causes:"
+          - "  1. No pre-staged module and no internet — PSGallery unreachable"
+          - "     Fix: run files/Save-MDIModule.ps1 on an internet-connected machine,"
+          - "          copy the DefenderForIdentity/ folder into files/, then redeploy"
+          - "  2. ActiveDirectory module missing — deploy rsat before this role"
+          - "  3. Set-MDIConfiguration failed — check DC event log for GroupPolicy errors"
+          - "Pre-stage: cd roles/enable_mdi_gpo/files/ && .\\Save-MDIModule.ps1"
+
+    - name: Fail with clear message
+      ansible.builtin.fail:
+        msg: "enable_mdi_gpo FAILED on {{ inventory_hostname }} — see above for details"
+
+- name: Show MDI GPO deployment status
+  ansible.builtin.debug:
+    msg:
+      - "════════════════════════════════════════════"
+      - "  enable_mdi_gpo — Complete"
+      - "════════════════════════════════════════════"
+      - "  Host     : {{ inventory_hostname }}"
+      - "  GPO      : {{ mdi_gpo_prefix }}* GPOs applied to domain"
+      - "  Note     : Assign svc_mdi as the MDI sensor service account"
+      - "             in the Microsoft Defender portal after onboarding"
+      - "════════════════════════════════════════════"
+
+- name: Log successful MDI GPO deployment
+  ansible.windows.win_powershell:
+    script: |
+      Add-Content -Path 'C:\Windows\Temp\zsec-ansible.log' `
+        -Value "OK enable_mdi_gpo on {{ inventory_hostname }}" `
+        -ErrorAction SilentlyContinue
+  ignore_errors: true

@@ -1,0 +1,200 @@
+---
+# Created by @ZephrFish 
+# https://zephrsec.com | https://blog.zsec.uk
+# wef - Configure Windows Event Forwarding
+# Target: DC01 (collector), all Windows hosts (forwarders)
+
+- name: Assert required variables are defined
+  ansible.builtin.assert:
+    that:
+      - ansible_host is defined
+      - inventory_hostname is defined
+      - wef_mode is defined
+      - wef_mode in ['collector', 'forwarder']
+    fail_msg: "wef_mode must be defined and set to 'collector' or 'forwarder' — check your role_vars"
+    success_msg: "Pre-flight variable check passed"
+
+- name: Assert wef_collector_server is set when mode is forwarder
+  ansible.builtin.assert:
+    that:
+      - wef_collector_server | default('') | length > 0
+    fail_msg: "wef_collector_server must be defined and non-empty when wef_mode is 'forwarder' — set it in role_vars"
+    success_msg: "wef_collector_server defined: OK"
+  when: wef_mode == 'forwarder'
+
+- name: Create WEF directory
+  ansible.windows.win_file:
+    path: C:\Tools\WEF
+    state: directory
+
+- name: Copy WEF configuration script
+  ansible.windows.win_copy:
+    src: configure-wef.ps1
+    dest: C:\Tools\WEF\configure-wef.ps1
+
+- name: Copy WEF subscription XML (collector only)
+  ansible.windows.win_copy:
+    src: zsec-wef-subscription.xml
+    dest: C:\Tools\WEF\zsec-wef-subscription.xml
+  when: wef_mode == 'collector'
+
+- name: Check if WEF already configured
+  ansible.windows.win_powershell:
+    script: |
+      $subs = wecutil es 2>&1
+      $subs
+  register: wef_configured
+  failed_when: false
+  changed_when: false
+
+- name: Configure Windows Event Forwarding
+  block:
+
+    - name: Configure as WEF Collector (DC01 only)
+      ansible.windows.win_powershell:
+        script: |
+          Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+          & C:\Tools\WEF\configure-wef.ps1 -Mode Collector `
+            -SubscriptionXmlPath 'C:\Tools\WEF\zsec-wef-subscription.xml' `
+            -Force
+      when: wef_mode == 'collector' and (wef_configured.stdout | default('') == '' or wef_force_reconfigure | default(false))
+      register: wef_collector_result
+      changed_when: true
+
+    - name: Configure as WEF Forwarder (all other Windows hosts)
+      ansible.windows.win_powershell:
+        script: |
+          Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+          & C:\Tools\WEF\configure-wef.ps1 -Mode Forwarder -CollectorServer "{{ wef_collector_server }}" -Force
+      when: wef_mode == 'forwarder' and (wef_configured.stdout | default('') == '' or wef_force_reconfigure | default(false))
+      register: wef_forwarder_result
+      changed_when: true
+
+    - name: Verify WinRM service is running
+      ansible.windows.win_service:
+        name: WinRM
+        state: started
+        start_mode: auto
+
+    - name: Verify Windows Event Collector service (collector only)
+      ansible.windows.win_service:
+        name: Wecsvc
+        state: started
+        start_mode: auto
+      when: wef_mode == 'collector'
+
+    - name: Verify WEF subscription exists (collector only)
+      ansible.windows.win_powershell:
+        script: |
+          $subs = wecutil es 2>&1
+          if ($subs -match 'ZSec-MDI-Events') {
+            Write-Output "SUBSCRIPTION_OK"
+          } else {
+            Write-Output "NO_SUBSCRIPTIONS: $subs"
+          }
+      register: wef_sub_check
+      changed_when: false
+      when: wef_mode == 'collector'
+
+    - name: Warn if WEF subscription is missing (collector only)
+      ansible.builtin.debug:
+        msg: "WARNING: WEF subscription not found — {{ wef_sub_check.output | join(' ') }}"
+      when:
+        - wef_mode == 'collector'
+        - wef_sub_check is defined
+        - "'SUBSCRIPTION_OK' not in (wef_sub_check.output | join(''))"
+
+  rescue:
+    - name: Log WEF configuration failure
+      ansible.windows.win_powershell:
+        script: Add-Content -Path 'C:\Windows\Temp\zsec-ansible.log' -Value "FAILED wef {{ ansible_date_time.date | default('unknown') }} on {{ inventory_hostname }}" -ErrorAction SilentlyContinue
+      ignore_errors: true
+
+    - name: Capture Windows event log on failure
+      ansible.windows.win_powershell:
+        script: |
+          try {
+            Get-WinEvent -LogName System -Newest 10 | Format-List | Out-String
+          } catch {
+            "Unable to retrieve WinEvent log: $_"
+          }
+      register: win_event_log
+      ignore_errors: true
+      changed_when: false
+
+    - name: Show event log
+      ansible.builtin.debug:
+        msg: "{{ win_event_log.output | default(['No logs available']) }}"
+
+    - name: Capture WEF subscription and service state on failure
+      ansible.windows.win_powershell:
+        script: "wecutil es; Get-Service Wecsvc,WinRM | Format-List"
+      register: wef_failure_status
+      ignore_errors: true
+
+    - name: Show WEF failure state
+      ansible.builtin.debug:
+        msg: "{{ wef_failure_status.output | default(['No WEF info available']) }}"
+
+    - name: Fail with clear message
+      ansible.builtin.fail:
+        msg: "WEF configuration FAILED on {{ inventory_hostname }}"
+
+- name: Display WEF configuration status
+  ansible.builtin.debug:
+    msg: "WEF configured as {{ wef_mode }} on {{ inventory_hostname }}"
+
+- name: Save WEF configuration info
+  ansible.windows.win_copy:
+    dest: "C:\\Tools\\wef-info.txt"
+    content: |
+      ═══════════════════════════════════════════════════════════════
+      ZSEC Windows Event Forwarding Configuration
+      Host: {{ inventory_hostname }}
+      ═══════════════════════════════════════════════════════════════
+
+      MODE: {{ wef_mode | default('collector') }}
+
+      {% if wef_mode | default('collector') == 'collector' %}
+      COLLECTOR CONFIGURATION
+      ───────────────────────
+      WinRM Service:  Running
+      Wecsvc Service: Running
+      Subscription:   Windows Event Collection
+      Events Collected:
+        - Security events (logon/logoff, process creation)
+        - System events (service start/stop)
+        - Application events
+      {% else %}
+      FORWARDER CONFIGURATION
+      ───────────────────────
+      WinRM Service:    Running
+      Collector Server: {{ wef_collector_server | default('N/A') }}
+      Subscription:     Forwards to collector
+      {% endif %}
+
+      VERIFICATION COMMANDS
+      ─────────────────────
+      # On collector - check subscriptions:
+      wecutil es
+
+      # On forwarder - check forwarding status:
+      wecutil gr <subscription_name>
+      ═══════════════════════════════════════════════════════════════
+
+- name: Show WEF deployment status
+  ansible.builtin.debug:
+    msg:
+      - "════════════════════════════════════════════"
+      - "  wef — Deployment Complete"
+      - "════════════════════════════════════════════"
+      - "  Mode         : {{ wef_mode | default('collector') }}"
+      - "  WinRM        : Running"
+      - "  Wecsvc       : Running"
+      - "  Info File    : C:\\Tools\\wef-info.txt"
+      - "════════════════════════════════════════════"
+
+- name: Log successful deployment
+  ansible.windows.win_powershell:
+    script: Add-Content -Path 'C:\Windows\Temp\zsec-ansible.log' -Value "OK wef on {{ inventory_hostname }}" -ErrorAction SilentlyContinue
+  ignore_errors: true

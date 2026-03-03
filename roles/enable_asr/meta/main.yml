@@ -1,0 +1,21 @@
+---
+dependencies: []
+
+galaxy_info:
+  role_name: enable_asr
+  author: "@curi0usJack"
+  description: An Ansible Role that enables common Attack Surface Reduction rules on Windows hosts
+  company: TrustedSec
+  license: GPLv3
+  min_ansible_version: "2.10"
+  platforms:
+    # Modify the platforms here as required
+    # This example includes a lot, see https://github.com/ansible/ansible-lint/blob/main/src/ansiblelint/schemas/meta.json for all possibilities
+    - name: Windows 
+      versions:
+        - "2012R2"
+        - "2016"
+        - "2019"
+        - "2022"
+
+collections: [ansible.windows.win_powershell] # Add any collections needed here

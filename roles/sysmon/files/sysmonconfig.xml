@@ -1,0 +1,270 @@
+<!--
+  ZSEC Lab Sysmon Configuration
+  Schema: 4.90  (Sysmon 14.x / 15.x)
+  Licensed for personal use - ZephrSec Ltd
+
+  Coverage:
+    - Process creation with full command lines (Event 1)
+    - File creation time changes / timestomping (Event 2)
+    - Outbound network connections (Event 3)
+    - Suspicious driver loads (Event 6)
+    - Credential-theft DLL loads (Event 7)
+    - Process injection via CreateRemoteThread (Event 8)
+    - LSASS memory access / credential dumping (Event 10)
+    - Suspicious file creation in staging paths (Event 11)
+    - Autorun / persistence registry keys (Event 12/13/14)
+    - Named pipe creation for C2 frameworks (Event 17/18)
+    - WMI persistence and execution (Event 19/20/21)
+    - DNS queries for C2 beaconing (Event 22)
+
+  Tuned to reduce noise from normal Windows and lab operations
+  while catching common red team TTPs.
+-->
+<Sysmon schemaversion="4.90">
+  <HashAlgorithms>sha256</HashAlgorithms>
+  <CheckRevocation/>
+  <EventFiltering>
+
+    <!-- ================================================================
+         EVENT 1: Process Creation
+         Log everything except high-frequency, known-benign system noise.
+         ================================================================ -->
+    <RuleGroup name="" groupRelation="or">
+      <ProcessCreate onmatch="exclude">
+        <!-- Windows built-in noise -->
+        <Image condition="is">C:\Windows\System32\conhost.exe</Image>
+        <Image condition="is">C:\Windows\System32\backgroundTaskHost.exe</Image>
+        <Image condition="is">C:\Windows\System32\wbem\WmiPrvSE.exe</Image>
+        <Image condition="is">C:\Windows\System32\svchost.exe</Image>
+        <Image condition="is">C:\Windows\System32\RuntimeBroker.exe</Image>
+        <Image condition="is">C:\Windows\System32\SearchFilterHost.exe</Image>
+        <Image condition="is">C:\Windows\System32\SearchIndexer.exe</Image>
+        <Image condition="is">C:\Windows\System32\SearchProtocolHost.exe</Image>
+        <Image condition="is">C:\Windows\SysWOW64\WerFault.exe</Image>
+        <Image condition="is">C:\Windows\System32\WerFault.exe</Image>
+        <Image condition="is">C:\Windows\System32\spoolsv.exe</Image>
+        <Image condition="is">C:\Windows\System32\taskhostw.exe</Image>
+        <Image condition="is">C:\Windows\System32\dllhost.exe</Image>
+      </ProcessCreate>
+    </RuleGroup>
+
+    <!-- ================================================================
+         EVENT 2: File Create Time Changed (timestomping)
+         Log all — timestomping is a common attacker anti-forensics TTP.
+         ================================================================ -->
+    <RuleGroup name="" groupRelation="or">
+      <FileCreateTime onmatch="exclude">
+        <!-- Exclude update/installer noise -->
+        <Image condition="begin with">C:\Windows\system32\msiexec.exe</Image>
+        <Image condition="begin with">C:\Windows\SoftwareDistribution</Image>
+      </FileCreateTime>
+    </RuleGroup>
+
+    <!-- ================================================================
+         EVENT 3: Network Connection
+         Log suspicious outbound; exclude normal Windows telemetry.
+         ================================================================ -->
+    <RuleGroup name="" groupRelation="or">
+      <NetworkConnect onmatch="exclude">
+        <!-- Windows Update and telemetry -->
+        <Image condition="is">C:\Windows\System32\svchost.exe</Image>
+        <DestinationPort condition="is">443</DestinationPort>
+        <DestinationPort condition="is">80</DestinationPort>
+        <!-- DNS -->
+        <DestinationPort condition="is">53</DestinationPort>
+        <!-- NTP -->
+        <DestinationPort condition="is">123</DestinationPort>
+      </NetworkConnect>
+    </RuleGroup>
+
+    <!-- ================================================================
+         EVENT 4: Sysmon Service State Changed — always log
+         ================================================================ -->
+    <RuleGroup name="" groupRelation="or">
+      <ServiceStateChange onmatch="include">
+        <State condition="is">Stopped</State>
+      </ServiceStateChange>
+    </RuleGroup>
+
+    <!-- ================================================================
+         EVENT 5: Process Terminated — exclude all (too noisy for lab)
+         ================================================================ -->
+    <RuleGroup name="" groupRelation="or">
+      <ProcessTerminate onmatch="exclude">
+        <Image condition="begin with">C:\</Image>
+      </ProcessTerminate>
+    </RuleGroup>
+
+    <!-- ================================================================
+         EVENT 6: Driver Loaded
+         Flag unsigned drivers and known malicious driver names.
+         ================================================================ -->
+    <RuleGroup name="" groupRelation="or">
+      <DriverLoad onmatch="include">
+        <!-- Unsigned drivers -->
+        <Signed condition="is">false</Signed>
+        <!-- Known malicious / BYOVD driver names -->
+        <ImageLoaded condition="contains">gmer</ImageLoaded>
+        <ImageLoaded condition="contains">capcom</ImageLoaded>
+        <ImageLoaded condition="contains">dbutil</ImageLoaded>
+        <ImageLoaded condition="contains">rtcore</ImageLoaded>
+      </DriverLoad>
+    </RuleGroup>
+
+    <!-- ================================================================
+         EVENT 7: Image Loaded
+         Flag credential-theft and injection DLLs.
+         ================================================================ -->
+    <RuleGroup name="" groupRelation="or">
+      <ImageLoad onmatch="include">
+        <!-- Credential theft tools -->
+        <ImageLoaded condition="contains">wce32.dll</ImageLoaded>
+        <ImageLoaded condition="contains">wce64.dll</ImageLoaded>
+        <ImageLoaded condition="contains">cmdlineExt</ImageLoaded>
+        <!-- Suspicious DLLs loaded from temp/user paths -->
+        <ImageLoaded condition="begin with">C:\Users\</ImageLoaded>
+        <ImageLoaded condition="begin with">C:\ProgramData\</ImageLoaded>
+        <ImageLoaded condition="begin with">C:\Windows\Temp\</ImageLoaded>
+        <!-- Mimikatz artefacts -->
+        <ImageLoaded condition="contains">mimikatz</ImageLoaded>
+        <!-- AMSI bypass / CLM bypass DLLs -->
+        <ImageLoaded condition="contains">amsi.dll</ImageLoaded>
+      </ImageLoad>
+    </RuleGroup>
+
+    <!-- ================================================================
+         EVENT 8: CreateRemoteThread
+         Log all — nearly always malicious or debugging.
+         ================================================================ -->
+    <RuleGroup name="" groupRelation="or">
+      <CreateRemoteThread onmatch="exclude">
+        <!-- Known benign injectors (AV products etc.) -->
+        <SourceImage condition="is">C:\Windows\System32\csrss.exe</SourceImage>
+      </CreateRemoteThread>
+    </RuleGroup>
+
+    <!-- ================================================================
+         EVENT 9: RawAccessRead — log all disk reads
+         ================================================================ -->
+    <RuleGroup name="" groupRelation="or">
+      <RawAccessRead onmatch="exclude">
+        <Image condition="is">C:\Windows\system32\svchost.exe</Image>
+      </RawAccessRead>
+    </RuleGroup>
+
+    <!-- ================================================================
+         EVENT 10: Process Access
+         Focus on LSASS access (credential dumping) and other HVTs.
+         ================================================================ -->
+    <RuleGroup name="" groupRelation="or">
+      <ProcessAccess onmatch="include">
+        <!-- LSASS — most credential dumping touches this -->
+        <TargetImage condition="is">C:\Windows\system32\lsass.exe</TargetImage>
+        <!-- SAM / SECURITY registry hives via regsvr32 -->
+        <TargetImage condition="is">C:\Windows\system32\regsvr32.exe</TargetImage>
+        <!-- Processes accessing other processes from temp/user paths -->
+        <SourceImage condition="begin with">C:\Users\</SourceImage>
+        <SourceImage condition="begin with">C:\Windows\Temp\</SourceImage>
+        <SourceImage condition="begin with">C:\ProgramData\</SourceImage>
+      </ProcessAccess>
+    </RuleGroup>
+
+    <!-- ================================================================
+         EVENT 11: File Created
+         Watch staging paths attackers commonly use for payloads/output.
+         ================================================================ -->
+    <RuleGroup name="" groupRelation="or">
+      <FileCreate onmatch="include">
+        <!-- Temp and staging paths -->
+        <TargetFilename condition="begin with">C:\Windows\Temp\</TargetFilename>
+        <TargetFilename condition="begin with">C:\Users\Public\</TargetFilename>
+        <TargetFilename condition="begin with">C:\ProgramData\</TargetFilename>
+        <!-- Executables and scripts dropped anywhere -->
+        <TargetFilename condition="end with">.exe</TargetFilename>
+        <TargetFilename condition="end with">.dll</TargetFilename>
+        <TargetFilename condition="end with">.ps1</TargetFilename>
+        <TargetFilename condition="end with">.bat</TargetFilename>
+        <TargetFilename condition="end with">.vbs</TargetFilename>
+        <TargetFilename condition="end with">.hta</TargetFilename>
+        <!-- Credential files -->
+        <TargetFilename condition="contains">lsass</TargetFilename>
+        <TargetFilename condition="contains">ntds.dit</TargetFilename>
+        <TargetFilename condition="end with">.dmp</TargetFilename>
+        <TargetFilename condition="end with">.kirbi</TargetFilename>
+      </FileCreate>
+    </RuleGroup>
+
+    <!-- ================================================================
+         EVENTS 12/13/14: Registry Events
+         Watch common persistence and credential storage keys.
+         ================================================================ -->
+    <RuleGroup name="" groupRelation="or">
+      <RegistryEvent onmatch="include">
+        <!-- Autorun persistence keys -->
+        <TargetObject condition="contains">CurrentVersion\Run</TargetObject>
+        <TargetObject condition="contains">CurrentVersion\RunOnce</TargetObject>
+        <TargetObject condition="contains">Winlogon</TargetObject>
+        <TargetObject condition="contains">Image File Execution Options</TargetObject>
+        <TargetObject condition="contains">AppCertDlls</TargetObject>
+        <TargetObject condition="contains">AppInit_DLLs</TargetObject>
+        <!-- WDigest credential caching (PTH prerequisite) -->
+        <TargetObject condition="contains">WDigest</TargetObject>
+        <!-- LSASS protection tampering -->
+        <TargetObject condition="contains">LSA\RunAsPPL</TargetObject>
+        <!-- LSA credential storage -->
+        <TargetObject condition="contains">lsass.exe</TargetObject>
+      </RegistryEvent>
+    </RuleGroup>
+
+    <!-- ================================================================
+         EVENTS 17/18: Pipe Events
+         Common C2 framework named pipes (Cobalt Strike, Metasploit, etc.)
+         ================================================================ -->
+    <RuleGroup name="" groupRelation="or">
+      <PipeEvent onmatch="include">
+        <!-- Cobalt Strike default pipe names -->
+        <PipeName condition="begin with">\msagent_</PipeName>
+        <PipeName condition="begin with">\DserNamePipe</PipeName>
+        <PipeName condition="begin with">\mojo.5688.8052</PipeName>
+        <PipeName condition="begin with">\postex</PipeName>
+        <PipeName condition="begin with">\status_</PipeName>
+        <PipeName condition="begin with">\MSSE-</PipeName>
+        <!-- Metasploit -->
+        <PipeName condition="begin with">\metsrv</PipeName>
+        <!-- Generic suspicious patterns -->
+        <PipeName condition="contains">beacon</PipeName>
+        <PipeName condition="contains">cobaltstrike</PipeName>
+        <PipeName condition="contains">metasploit</PipeName>
+      </PipeEvent>
+    </RuleGroup>
+
+    <!-- ================================================================
+         EVENTS 19/20/21: WMI Events
+         Log all WMI persistence and lateral movement.
+         ================================================================ -->
+    <RuleGroup name="" groupRelation="or">
+      <WmiEvent onmatch="exclude">
+      </WmiEvent>
+    </RuleGroup>
+
+    <!-- ================================================================
+         EVENT 22: DNS Queries
+         Log all — useful for C2 beaconing and lateral movement detection.
+         Exclude common Windows/lab noise.
+         ================================================================ -->
+    <RuleGroup name="" groupRelation="or">
+      <DnsQuery onmatch="exclude">
+        <!-- Windows internal / Bonjour / NTP -->
+        <QueryName condition="end with">.local</QueryName>
+        <QueryName condition="end with">.arpa</QueryName>
+        <QueryName condition="end with">time.windows.com</QueryName>
+        <QueryName condition="end with">windowsupdate.com</QueryName>
+        <QueryName condition="end with">microsoft.com</QueryName>
+        <QueryName condition="end with">msftconnecttest.com</QueryName>
+        <!-- Lab internal domain -->
+        <QueryName condition="end with">zsec.local</QueryName>
+      </DnsQuery>
+    </RuleGroup>
+
+  </EventFiltering>
+</Sysmon>

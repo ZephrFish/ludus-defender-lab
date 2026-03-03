@@ -1,0 +1,22 @@
+---
+# Created by @ZephrFish 
+# https://zephrsec.com | https://blog.zsec.uk
+galaxy_info:
+  role_name: smb_shares
+  author: "@ZephrFish"
+  description: Configure SMB shares with planted credentials for lateral movement training
+  version: "1.0.0"
+  license: MIT
+  min_ansible_version: "2.10"
+  platforms:
+    - name: Windows
+      versions:
+        - all
+
+  galaxy_tags:
+    - windows
+    - security
+    - activedirectory
+    - pentest
+
+dependencies: []
