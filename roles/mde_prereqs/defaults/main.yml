@@ -80,6 +80,9 @@ mde_ps_operational_log_size_mb: 128  # Microsoft-Windows-PowerShell/Operational 
 mde_wmi_log_size_mb: 64           # Microsoft-Windows-WMI-Activity/Operational (disabled by default)
 mde_task_log_size_mb: 64          # Microsoft-Windows-TaskScheduler/Operational (default 4 MB)
 mde_dns_log_size_mb: 32           # Microsoft-Windows-DNS-Client/Operational (disabled by default)
+mde_capi2_log_size_mb: 32         # Microsoft-Windows-CAPI2/Operational — certificate chain/enrollment events (disabled by default)
+mde_bits_log_size_mb: 32          # Microsoft-Windows-BITS-Client/Operational — BITS persistence/downloads (disabled by default)
+mde_termsvcs_log_size_mb: 32      # Microsoft-Windows-TerminalServices-LocalSessionManager/Operational — RDP lateral movement
 
 # ── Advanced Audit Policy ─────────────────────────────────────────────────────
 # Sets SCENoApplyLegacyAuditPolicy and configures 18 auditpol subcategories.
@@ -170,10 +173,21 @@ mde_disable_removable_drive_scanning: false
 mde_signature_update_interval: 1
 
 # ── Extended Audit Subcategories and DC-Specific Log Channels ─────────────────
-# Extended subcategories: DPAPI Activity, Detailed File Share, Token Right Adjusted,
-#   Sensitive Privilege Use, Plug and Play, Group Membership.
+# Extended subcategories: DPAPI Activity, Detailed File Share, Handle Manipulation,
+#   Registry, Token Right Adjusted, Sensitive Privilege Use, Plug and Play, Group Membership.
 # DC log channels: Directory Service and NTLM/Operational — DC-only, default false.
 mde_enable_extended_audit_subcategories: true
 mde_enable_dc_log_channels: false
 mde_ds_log_size_mb: 256
 mde_ntlm_op_log_size_mb: 64
+
+# ── Kerberos Audit Subcategories (DC only) ─────────────────────────────────────
+# Events 4768/4769/4770/4771 — Kerberos Authentication Service and Kerberos Service
+# Ticket Operations. Critical for MDI to detect Kerberoasting, pass-the-ticket,
+# and golden/silver ticket abuse. DC-only — default false.
+mde_enable_kerberos_auditing: false
+
+# ── DNS Diagnostic Logging (DC only) ──────────────────────────────────────────
+# Set-DnsServerDiagnostics -All $true. MDI uses DNS query logs to detect DNS
+# reconnaissance (T1018, T1046). Requires DNS Server role. DC-only, default false.
+mde_enable_dns_diagnostic_logging: false

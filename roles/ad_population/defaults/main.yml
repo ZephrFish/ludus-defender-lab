@@ -16,3 +16,14 @@ enable_acl_misconfigs: false
 acl_misconfigs: []
 enable_delegation_misconfigs: false
 enable_gpo_misconfigs: false
+
+# ── Account Lockout Policy ─────────────────────────────────────────────────────
+# Configures Default Domain Password Policy for realistic detection scenarios.
+# Without a lockout threshold, password spray only generates Event 4625 (failure);
+# with it, sprays also generate Event 4740 (lockout) which MDI uses to detect
+# horizontal brute-force (T1110.003).
+# Set ad_configure_lockout: false to skip (e.g. if GPO manages this separately).
+ad_configure_lockout: true
+ad_lockout_threshold: 10           # failed attempts before lockout (0 = disabled)
+ad_lockout_duration_mins: 30       # 0 = requires admin unlock
+ad_lockout_observation_window_mins: 30

@@ -1,8 +1,6 @@
 # Ludus Defender Lab
 
-Ludus range configs and Ansible roles for a Windows security lab pre-staged for MDE and MDI, with a fully misconfigured ADCS installation for detection coverage testing.
-
-Two configs:
+Ludus range config and Ansible roles for a Windows security lab pre-staged for MDE and MDI, with a fully misconfigured ADCS installation for detection coverage testing.
 
 | Config | VMs | Purpose |
 |---|---|---|
@@ -12,7 +10,7 @@ Two configs:
 
 - [Ludus](https://docs.ludus.cloud) installed and configured
 - `LUDUS_API_KEY` set in your environment
-- VM templates: `win2022-server-x64-template` (+ `debian-12-x64-server-template` for ADCS lab)
+- VM template: `win2022-server-x64-template`
 
 ## Deploy
 
@@ -24,14 +22,21 @@ cd roles/
 # Set config and deploy
 ludus range config set -f zsec-mde-mdi-lab.yml
 ludus range deploy
+```
 
-# Post-onboarding snapshot (after MDE/MDI are onboarded from security.microsoft.com)
+MDE and MDI are not auto-installed. Onboard both from [security.microsoft.com](https://security.microsoft.com) after the range is up:
+
+1. **MDE** — Endpoints → Device management → Onboarding → Windows Server 2022. Run the onboarding script on both DC01 and WKS01.
+2. **MDI** — Settings → Identities → Sensors → Add sensor. Download and run the sensor installer on DC01.
+
+```bash
+# Snapshot after onboarding so you can revert without repeating the process
 ludus range snapshot create --name post-onboarding
 ```
 
 ## Environment settings
 
-All environment-specific values are defined as YAML anchors at the top of each config. Edit before deploying:
+All environment-specific values are defined as YAML anchors at the top of the config. Edit before deploying:
 
 ```yaml
 x-domain:      &domain      "zsec.local"
@@ -40,27 +45,28 @@ x-admin-pass:  &admin-pass  "D0main@dmin2026"
 # ...
 ```
 
-Compound FQDNs in `dns_rewrites` and SPN strings need updating separately — YAML doesn't support string interpolation.
+Compound FQDNs in `dns_rewrites` and SPN strings need updating separately — YAML does not support string interpolation.
 
 ## Roles
 
-All 10 roles live in `roles/`. The install script picks everything up automatically.
+All roles live in `roles/`. The install script handles everything.
 
-| Role | Purpose |
-|---|---|
-| `mde_prereqs` | Defender config, audit policy, logging, LSA hardening, TLS 1.2 |
-| `wef` | Windows Event Forwarding (collector and forwarder modes) |
-| `sysmon` | Sysmon install and config |
-| `adcs_lab` | ADCS ESC1–ESC15 misconfiguration setup |
-| `ad_population` | Users, groups, OUs, Kerberoastable/ASREPRoastable accounts |
-| `smb_shares` | SMB shares including honeypot share |
-| `enable_mdi_gpo` | MDI audit GPO |
-| `enable_asr` | Attack Surface Reduction rules |
-| `rsat` | Remote Server Administration Tools |
-| `pivot_tools` | Attacker tooling (certipy, impacket, netexec, bloodhound, etc.) |
+| Role | Used in | Purpose |
+|---|---|---|
+| `mde_prereqs` | DC01, WKS01 | Defender config, audit policy, logging, LSA hardening, TLS 1.2 |
+| `wef` | DC01, WKS01 | Windows Event Forwarding (collector on DC01, forwarder on WKS01) |
+| `sysmon` | DC01, WKS01 | Sysmon install and config |
+| `adcs_lab` | DC01 | ADCS ESC1–ESC15 misconfiguration setup |
+| `ad_population` | DC01 | Users, groups, OUs, Kerberoastable/ASREPRoastable accounts |
+| `smb_shares` | DC01, WKS01 | SMB shares including honeypot share |
+| `enable_mdi_gpo` | DC01 | MDI audit GPO |
+| `enable_asr` | WKS01 | Attack Surface Reduction rules |
+| `rsat` | WKS01 | Remote Server Administration Tools |
+
+Community role installed via Ansible Galaxy: `badsectorlabs.ludus_adcs` (DC01).
 
 ## Credits
 
-`enable_asr` and `enable_mdi_gpo` are derived from [@curi0usJack](https://github.com/curi0usJack)'s original work at [curi0usJack/Ludus-MDE-MDI-Roles](https://github.com/curi0usJack/Ludus-MDE-MDI-Roles). This repo builds on those foundations, restructures them into a unified DC↔WKS setup, and adds the ADCS misconfiguration layer, MDE prerequisites hardening, WEF pipeline, and additional roles.
+`enable_asr` and `enable_mdi_gpo` are derived from [@curi0usJack](https://github.com/curi0usJack)'s work at [curi0usJack/Ludus-MDE-MDI-Roles](https://github.com/curi0usJack/Ludus-MDE-MDI-Roles). This repo extends those roles into a unified DC↔WKS setup and adds the ADCS misconfiguration layer, MDE prerequisites hardening, WEF pipeline, and additional roles.
 
 AD CS lab is a [snippet from my course](https://lms.zsec.red)

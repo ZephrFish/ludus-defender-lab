@@ -6,16 +6,19 @@
   Coverage:
     - Process creation with full command lines (Event 1)
     - File creation time changes / timestomping (Event 2)
-    - Outbound network connections (Event 3)
+    - Outbound network connections, excl. svchost/NTP (Event 3)
     - Suspicious driver loads (Event 6)
     - Credential-theft DLL loads (Event 7)
     - Process injection via CreateRemoteThread (Event 8)
     - LSASS memory access / credential dumping (Event 10)
-    - Suspicious file creation in staging paths (Event 11)
-    - Autorun / persistence registry keys (Event 12/13/14)
-    - Named pipe creation for C2 frameworks (Event 17/18)
+    - Suspicious file creation incl. webshells/scripts/shortcuts (Event 11)
+    - Autorun / persistence / SSP / KnownDLLs / SilentExit registry keys (Event 12/13/14)
+    - Alternate Data Stream creation / payload hiding (Event 15)
+    - Named pipe creation for CS/MSF/Havoc/Sliver/BRC4/PoshC2 (Event 17/18)
     - WMI persistence and execution (Event 19/20/21)
-    - DNS queries for C2 beaconing (Event 22)
+    - DNS queries incl. internal AD recon (Event 22)
+    - File deletion in attacker staging paths (Event 23)
+    - Process tampering / hollowing / doppelganging (Event 25)
 
   Tuned to reduce noise from normal Windows and lab operations
   while catching common red team TTPs.
@@ -62,17 +65,18 @@
 
     <!-- ================================================================
          EVENT 3: Network Connection
-         Log suspicious outbound; exclude normal Windows telemetry.
+         Log all process network connections except high-frequency benign
+         noise from svchost (Windows Update, WMI, NTP, DNS resolver).
+         Port-based exclusions are NOT used here — excluding all 443/80
+         would blind the config to HTTPS C2, exfil, and lateral movement.
+         Event 22 (DnsQuery) provides DNS visibility without needing port
+         53 exclusions here.
          ================================================================ -->
     <RuleGroup name="" groupRelation="or">
       <NetworkConnect onmatch="exclude">
-        <!-- Windows Update and telemetry -->
+        <!-- svchost handles Windows Update, WMI, NTP, DNS — too noisy to log -->
         <Image condition="is">C:\Windows\System32\svchost.exe</Image>
-        <DestinationPort condition="is">443</DestinationPort>
-        <DestinationPort condition="is">80</DestinationPort>
-        <!-- DNS -->
-        <DestinationPort condition="is">53</DestinationPort>
-        <!-- NTP -->
+        <!-- NTP from other system processes -->
         <DestinationPort condition="is">123</DestinationPort>
       </NetworkConnect>
     </RuleGroup>
@@ -191,6 +195,21 @@
         <TargetFilename condition="contains">ntds.dit</TargetFilename>
         <TargetFilename condition="end with">.dmp</TargetFilename>
         <TargetFilename condition="end with">.kirbi</TargetFilename>
+        <!-- Webshell extensions (IIS / ADCS web enrollment) -->
+        <TargetFilename condition="end with">.aspx</TargetFilename>
+        <TargetFilename condition="end with">.ashx</TargetFilename>
+        <TargetFilename condition="end with">.asmx</TargetFilename>
+        <!-- Persistence: shortcuts and control panel sideloading -->
+        <TargetFilename condition="end with">.lnk</TargetFilename>
+        <TargetFilename condition="end with">.cpl</TargetFilename>
+        <!-- Script file drops -->
+        <TargetFilename condition="end with">.js</TargetFilename>
+        <TargetFilename condition="end with">.vbe</TargetFilename>
+        <TargetFilename condition="end with">.wsf</TargetFilename>
+        <TargetFilename condition="end with">.wsh</TargetFilename>
+        <TargetFilename condition="end with">.cmd</TargetFilename>
+        <!-- Excel add-in attacks -->
+        <TargetFilename condition="end with">.xll</TargetFilename>
       </FileCreate>
     </RuleGroup>
 
@@ -213,6 +232,14 @@
         <TargetObject condition="contains">LSA\RunAsPPL</TargetObject>
         <!-- LSA credential storage -->
         <TargetObject condition="contains">lsass.exe</TargetObject>
+        <!-- Pre-boot execution (bootkit/rootkit persistence) -->
+        <TargetObject condition="contains">BootExecute</TargetObject>
+        <!-- Silent process exit hijacking (T1546.012) -->
+        <TargetObject condition="contains">SilentProcessExit</TargetObject>
+        <!-- SSP/AP injection for credential capture (T1547.005) -->
+        <TargetObject condition="contains">SecurityProviders</TargetObject>
+        <!-- KnownDLLs tampering for DLL hijacking -->
+        <TargetObject condition="contains">KnownDLLs</TargetObject>
       </RegistryEvent>
     </RuleGroup>
 
@@ -231,6 +258,19 @@
         <PipeName condition="begin with">\MSSE-</PipeName>
         <!-- Metasploit -->
         <PipeName condition="begin with">\metsrv</PipeName>
+        <!-- Havoc C2 -->
+        <PipeName condition="begin with">\havcpipe</PipeName>
+        <!-- Sliver C2 -->
+        <PipeName condition="begin with">\sliverroot</PipeName>
+        <PipeName condition="begin with">\sliver</PipeName>
+        <!-- Brute Ratel C4 -->
+        <PipeName condition="begin with">\BrRatMfxPipe</PipeName>
+        <!-- PoshC2 -->
+        <PipeName condition="begin with">\PoshC2_</PipeName>
+        <!-- RemCom (remote command execution) -->
+        <PipeName condition="is">\RemCom_communicaton</PipeName>
+        <!-- PAExec -->
+        <PipeName condition="begin with">\paexec</PipeName>
         <!-- Generic suspicious patterns -->
         <PipeName condition="contains">beacon</PipeName>
         <PipeName condition="contains">cobaltstrike</PipeName>
@@ -248,22 +288,61 @@
     </RuleGroup>
 
     <!-- ================================================================
+         EVENT 15: FileCreateStreamHash (Alternate Data Streams)
+         Detects payload hiding via NTFS ADS (e.g. Zone.Identifier writes
+         and attacker-created streams). Exclude high-frequency Zone.Identifier
+         writes from browsers/downloads which are benign.
+         ================================================================ -->
+    <RuleGroup name="" groupRelation="or">
+      <FileCreateStreamHash onmatch="exclude">
+        <!-- Browser/download Zone.Identifier marks are expected -->
+        <Contents condition="contains">ZoneTransfer</Contents>
+        <Image condition="is">C:\Windows\System32\svchost.exe</Image>
+      </FileCreateStreamHash>
+    </RuleGroup>
+
+    <!-- ================================================================
          EVENT 22: DNS Queries
          Log all — useful for C2 beaconing and lateral movement detection.
-         Exclude common Windows/lab noise.
+         Internal zsec.local queries are intentionally NOT excluded so that
+         DNS-based recon (BloodHound, nslookup enumeration, reverse lookups)
+         is visible in Sysmon. Exclude only high-frequency Windows noise
+         that has no detection value.
          ================================================================ -->
     <RuleGroup name="" groupRelation="or">
       <DnsQuery onmatch="exclude">
-        <!-- Windows internal / Bonjour / NTP -->
-        <QueryName condition="end with">.local</QueryName>
+        <!-- High-frequency Windows internal noise with no detection value -->
         <QueryName condition="end with">.arpa</QueryName>
         <QueryName condition="end with">time.windows.com</QueryName>
         <QueryName condition="end with">windowsupdate.com</QueryName>
         <QueryName condition="end with">microsoft.com</QueryName>
         <QueryName condition="end with">msftconnecttest.com</QueryName>
-        <!-- Lab internal domain -->
-        <QueryName condition="end with">zsec.local</QueryName>
       </DnsQuery>
+    </RuleGroup>
+
+    <!-- ================================================================
+         EVENT 23: FileDelete
+         Scoped to attacker staging paths to detect tool cleanup without
+         generating system-wide file deletion noise.
+         ================================================================ -->
+    <RuleGroup name="" groupRelation="or">
+      <FileDelete onmatch="include">
+        <TargetFilename condition="begin with">C:\Windows\Temp\</TargetFilename>
+        <TargetFilename condition="begin with">C:\Users\Public\</TargetFilename>
+        <TargetFilename condition="begin with">C:\ProgramData\</TargetFilename>
+        <TargetFilename condition="begin with">C:\Tools\</TargetFilename>
+      </FileDelete>
+    </RuleGroup>
+
+    <!-- ================================================================
+         EVENT 25: ProcessTampering
+         Detects process hollowing, doppelganging, and herpaderping —
+         techniques that replace legitimate process memory with malicious
+         code. Log all (very low noise, high fidelity).
+         ================================================================ -->
+    <RuleGroup name="" groupRelation="or">
+      <ProcessTampering onmatch="exclude">
+      </ProcessTampering>
     </RuleGroup>
 
   </EventFiltering>

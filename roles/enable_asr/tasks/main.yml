@@ -37,6 +37,8 @@
       Add-MpPreference -AttackSurfaceReductionRules_Ids c0033c00-d16d-4114-a5a0-dc9b3a7d2ceb -AttackSurfaceReductionRules_Actions Enabled
       # Use advanced protection against ransomware
       Add-MpPreference -AttackSurfaceReductionRules_Ids c1db55ab-c21a-4637-bb3f-a12568109d35 -AttackSurfaceReductionRules_Actions Enabled
+      # Block webshell creation for servers
+      Add-MpPreference -AttackSurfaceReductionRules_Ids a8f5898e-7a5e-49d8-a8a3-a0c3b3f0db2d -AttackSurfaceReductionRules_Actions Enabled
       Write-Output "ASR rules configured successfully"
   register: asr_result
   changed_when: true

@@ -18,11 +18,17 @@
 - name: Set High Performance power plan
   ansible.windows.win_powershell:
     script: |
-      powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
-      $plan = powercfg /getactivescheme
-      Write-Output "Active power plan: $plan"
+      $hiPerfGuid = '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c'
+      $current = powercfg /getactivescheme
+      if ($current -match $hiPerfGuid) {
+        Write-Output "NOCHANGE: High Performance plan already active"
+      } else {
+        powercfg /setactive $hiPerfGuid
+        Write-Output "CHANGED: High Performance plan activated"
+      }
   when: mde_enable_high_performance_power_plan | default(true)
-  changed_when: true
+  register: power_plan_result
+  changed_when: "'CHANGED:' in (power_plan_result.output | default([]) | join(''))"
 
 # ── Ensure DisableAntiSpyware is not set ──────────────────────────────────────
 # Must run early — if Defender is disabled, all subsequent Set-MpPreference calls
@@ -43,7 +49,8 @@
         Write-Output "Defender policy key does not exist — OK"
       }
   when: mde_fix_disable_antispyware | default(true)
-  changed_when: false
+  register: antispyware_fix_result
+  changed_when: "'corrected to 0' in (antispyware_fix_result.output | default([]) | join(''))"
 
 # ── Windows Defender Service Health ───────────────────────────────────────────
 # WinDefend and WdNisSvc must be Running/Automatic before MDE onboarding.
@@ -408,11 +415,14 @@
   ansible.windows.win_powershell:
     script: |
       $channels = @(
-        @{ Name = 'Microsoft-Windows-Windows Defender/Operational'; SizeMB = {{ mde_defender_log_size_mb      | default(64)  }} },
-        @{ Name = 'Microsoft-Windows-PowerShell/Operational';        SizeMB = {{ mde_ps_operational_log_size_mb | default(128) }} },
-        @{ Name = 'Microsoft-Windows-WMI-Activity/Operational';      SizeMB = {{ mde_wmi_log_size_mb           | default(64)  }} },
-        @{ Name = 'Microsoft-Windows-TaskScheduler/Operational';     SizeMB = {{ mde_task_log_size_mb          | default(64)  }} },
-        @{ Name = 'Microsoft-Windows-DNS-Client/Operational';        SizeMB = {{ mde_dns_log_size_mb           | default(32)  }} }
+        @{ Name = 'Microsoft-Windows-Windows Defender/Operational';                   SizeMB = {{ mde_defender_log_size_mb      | default(64)  }} },
+        @{ Name = 'Microsoft-Windows-PowerShell/Operational';                        SizeMB = {{ mde_ps_operational_log_size_mb | default(128) }} },
+        @{ Name = 'Microsoft-Windows-WMI-Activity/Operational';                      SizeMB = {{ mde_wmi_log_size_mb           | default(64)  }} },
+        @{ Name = 'Microsoft-Windows-TaskScheduler/Operational';                     SizeMB = {{ mde_task_log_size_mb          | default(64)  }} },
+        @{ Name = 'Microsoft-Windows-DNS-Client/Operational';                        SizeMB = {{ mde_dns_log_size_mb           | default(32)  }} },
+        @{ Name = 'Microsoft-Windows-CAPI2/Operational';                             SizeMB = {{ mde_capi2_log_size_mb         | default(32)  }} },
+        @{ Name = 'Microsoft-Windows-BITS-Client/Operational';                       SizeMB = {{ mde_bits_log_size_mb          | default(32)  }} },
+        @{ Name = 'Microsoft-Windows-TerminalServices-LocalSessionManager/Operational'; SizeMB = {{ mde_termsvcs_log_size_mb   | default(32)  }} }
       )
       foreach ($ch in $channels) {
         $bytes = $ch.SizeMB * 1MB
@@ -509,7 +519,7 @@
 # Additional detection coverage:
 #   Process Creation, Logon, Removable Storage, IPsec Driver,
 #   Security State Change, System Integrity  → success+failure
-#   Logoff, Filtering Platform Connection, SAM, Filtering Platform Policy Change → success only
+#   Logoff, Filtering Platform Connection, Filtering Platform Policy Change → success only
 - name: Configure advanced audit policy subcategories via auditpol
   ansible.windows.win_powershell:
     script: |
@@ -523,16 +533,21 @@
         'Directory Service Access',
         'Security System Extension',
         'Process Creation',
+        'Process Termination',
         'Logon',
+        'Special Logon',
         'Removable Storage',
         'IPsec Driver',
         'Security State Change',
-        'System Integrity'
+        'System Integrity',
+        'File System',
+        'File Share',
+        'Other Object Access Events',
+        'SAM'
       )
       $so = @(
         'Logoff',
         'Filtering Platform Connection',
-        'SAM',
         'Filtering Platform Policy Change'
       )
       foreach ($sub in $sf) {
@@ -541,7 +556,7 @@
       foreach ($sub in $so) {
         auditpol /set /subcategory:"$sub" /success:enable /failure:disable | Out-Null
       }
-      Write-Output "Advanced audit subcategories configured (18 subcategories)"
+      Write-Output "Advanced audit subcategories configured (23 subcategories)"
   when: mde_enable_advanced_audit_policy | default(true)
   changed_when: true
 
@@ -559,6 +574,8 @@
       $sf = @(
         'DPAPI Activity',
         'Detailed File Share',
+        'Handle Manipulation',
+        'Registry',
         'Token Right Adjusted Events',
         'Sensitive Privilege Use'
       )
@@ -572,9 +589,42 @@
       foreach ($sub in $so) {
         auditpol /set /subcategory:"$sub" /success:enable /failure:disable | Out-Null
       }
-      Write-Output "Extended audit subcategories configured (6 additional subcategories)"
+      Write-Output "Extended audit subcategories configured (8 additional subcategories)"
   when: mde_enable_extended_audit_subcategories | default(true)
   changed_when: true
+
+# ── Kerberos Audit Subcategories (DC only) ────────────────────────────────────
+# Kerberos Authentication Service (Event 4768/4771) and Kerberos Service Ticket
+# Operations (Event 4769/4770) are critical for MDI to detect:
+#   - Over-pass-the-hash / pass-the-ticket
+#   - Kerberoasting (abnormal TGS requests)
+#   - Golden/silver ticket usage (T1558)
+# DC-only — these subcategories produce no useful events on member servers.
+# Set mde_enable_kerberos_auditing: true in DC role_vars.
+- name: Configure Kerberos audit subcategories (DC only)
+  ansible.windows.win_powershell:
+    script: |
+      auditpol /set /subcategory:"Kerberos Authentication Service" /success:enable /failure:enable | Out-Null
+      auditpol /set /subcategory:"Kerberos Service Ticket Operations" /success:enable /failure:enable | Out-Null
+      Write-Output "Kerberos audit subcategories configured (Events 4768/4769/4770/4771)"
+  when: mde_enable_kerberos_auditing | default(false)
+  changed_when: true
+
+# ── DNS Diagnostic Logging (DC only) ──────────────────────────────────────────
+# Set-DnsServerDiagnostics -All $true enables DNS query/response/error logging
+# to the DNS Server debug log. MDI uses DNS query logs to detect:
+#   - DNS reconnaissance (T1018, T1046)
+#   - Unusual reverse lookups and zone transfers
+# Requires the DNS Server role. DC-only — set mde_enable_dns_diagnostic_logging: true
+# in DC role_vars.
+- name: Enable DNS Server diagnostic logging (DC only)
+  ansible.windows.win_powershell:
+    script: |
+      Set-DnsServerDiagnostics -All $true
+      Write-Output "DNS Server diagnostic logging enabled"
+  when: mde_enable_dns_diagnostic_logging | default(false)
+  changed_when: true
+  ignore_errors: true
 
 # ── NTLM Auditing (DC only) ───────────────────────────────────────────────────
 # Enables Event 8004 — MDI enriches NTLM auth activities with server-accessed data.
@@ -695,8 +745,10 @@
       - "  DC log channels        : {{ mde_enable_dc_log_channels | default(false) }} (DS={{ mde_ds_log_size_mb | default(256) }} MB, NTLM-Op={{ mde_ntlm_op_log_size_mb | default(64) }} MB)"
       - "  LDAP Diag (Event 1644) : {{ mde_enable_ldap_diagnostic_logging | default(false) }} (Field Engineering level={{ mde_ldap_diagnostic_level | default(5) }})"
       - "  Process CmdLine 4688   : {{ mde_enable_process_cmdline_audit | default(true) }}"
-      - "  Advanced Audit Policy  : {{ mde_enable_advanced_audit_policy | default(true) }} (18 subcategories)"
-      - "  Extended Audit Subs    : {{ mde_enable_extended_audit_subcategories | default(true) }} (DPAPI, FileShare, Token, Privilege, PnP, GroupMembership)"
+      - "  Advanced Audit Policy  : {{ mde_enable_advanced_audit_policy | default(true) }} (23 subcategories — incl. Special Logon, File System, File Share, Other Object Access, Process Termination)"
+      - "  Extended Audit Subs    : {{ mde_enable_extended_audit_subcategories | default(true) }} (DPAPI, FileShare, HandleManip, Registry, Token, Privilege, PnP, GroupMembership)"
+      - "  Kerberos Auditing      : {{ mde_enable_kerberos_auditing | default(false) }} (Events 4768/4769/4770/4771 — DC only)"
+      - "  DNS Diag Logging       : {{ mde_enable_dns_diagnostic_logging | default(false) }} (DNS recon detection — DC only)"
       - "  NTLM Auditing (8004)   : {{ mde_enable_ntlm_auditing | default(false) }}"
       - "  ADCS CA Auditing       : {{ mde_enable_adcs_ca_auditing | default(false) }}"
       - "  MDE Readiness Check    : {{ mde_run_readiness_check | default(true) }} (see task output for Get-MpComputerStatus)"
