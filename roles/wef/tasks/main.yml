@@ -57,7 +57,7 @@
           & C:\Tools\WEF\configure-wef.ps1 -Mode Collector `
             -SubscriptionXmlPath 'C:\Tools\WEF\zsec-wef-subscription.xml' `
             -Force
-      when: wef_mode == 'collector' and (wef_configured.stdout | default('') == '' or wef_force_reconfigure | default(false))
+      when: wef_mode == 'collector' and (wef_configured.output | default([]) | join('') | trim == '' or wef_force_reconfigure | default(false))
       register: wef_collector_result
       changed_when: true
 
@@ -66,7 +66,7 @@
         script: |
           Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
           & C:\Tools\WEF\configure-wef.ps1 -Mode Forwarder -CollectorServer "{{ wef_collector_server }}" -Force
-      when: wef_mode == 'forwarder' and (wef_configured.stdout | default('') == '' or wef_force_reconfigure | default(false))
+      when: wef_mode == 'forwarder' and (wef_configured.output | default([]) | join('') | trim == '' or wef_force_reconfigure | default(false))
       register: wef_forwarder_result
       changed_when: true
 

@@ -25,9 +25,18 @@
     Query covers:
       Security log     — logon/logoff, privilege use, account/group management,
                          ADCS (4886/4887/4888), Kerberos (4768/4769/4771/4776),
-                         process creation (4688), object access (4662/4663/4670)
+                         process creation (4688), object access (4662/4663/4670),
+                         service install (4697), token right adjusted (4703)
       System log       — service installs (7045), service state changes (7036/7040)
       Sysmon           — all events (rich process/network/file telemetry)
+      PowerShell       — script block (4104), module (4103), pipeline (4105/4106)
+      Defender         — all events
+      WMI-Activity     — query execution (5857/5858/5860/5861) for WMI persistence
+      TaskScheduler    — task registration/execution (106/140/141/200/201)
+      BITS-Client      — job creation/completion (59/60/61) for BITS persistence
+      TerminalServices — RDP session events (21/23/24/25) for lateral movement
+      CAPI2            — certificate chain/enrollment events for ADCS abuse detection
+      NTLM/Operational — NTLM audit events (8001/8002/8003/8004)
   -->
   <Query>
     <![CDATA[
@@ -56,6 +65,8 @@
                  EventID=4772 or EventID=4776 or EventID=4777 or
                  EventID=4778 or EventID=4779 or
                  EventID=4798 or EventID=4799 or
+                 EventID=4697 or
+                 EventID=4703 or
                  EventID=4886 or EventID=4887 or EventID=4888 or EventID=4889 or
                  EventID=5136 or EventID=5137 or EventID=5138 or
                  EventID=5139 or EventID=5141
@@ -77,6 +88,34 @@
         </Query>
         <Query Id="4" Path="Microsoft-Windows-Windows Defender/Operational">
           <Select Path="Microsoft-Windows-Windows Defender/Operational">*</Select>
+        </Query>
+        <Query Id="5" Path="Microsoft-Windows-WMI-Activity/Operational">
+          <Select Path="Microsoft-Windows-WMI-Activity/Operational">
+            *[System[EventID=5857 or EventID=5858 or EventID=5860 or EventID=5861]]
+          </Select>
+        </Query>
+        <Query Id="6" Path="Microsoft-Windows-TaskScheduler/Operational">
+          <Select Path="Microsoft-Windows-TaskScheduler/Operational">
+            *[System[EventID=106 or EventID=140 or EventID=141 or EventID=200 or EventID=201]]
+          </Select>
+        </Query>
+        <Query Id="7" Path="Microsoft-Windows-BITS-Client/Operational">
+          <Select Path="Microsoft-Windows-BITS-Client/Operational">
+            *[System[EventID=59 or EventID=60 or EventID=61]]
+          </Select>
+        </Query>
+        <Query Id="8" Path="Microsoft-Windows-TerminalServices-LocalSessionManager/Operational">
+          <Select Path="Microsoft-Windows-TerminalServices-LocalSessionManager/Operational">
+            *[System[EventID=21 or EventID=23 or EventID=24 or EventID=25]]
+          </Select>
+        </Query>
+        <Query Id="9" Path="Microsoft-Windows-CAPI2/Operational">
+          <Select Path="Microsoft-Windows-CAPI2/Operational">*</Select>
+        </Query>
+        <Query Id="10" Path="Microsoft-Windows-NTLM/Operational">
+          <Select Path="Microsoft-Windows-NTLM/Operational">
+            *[System[EventID=8001 or EventID=8002 or EventID=8003 or EventID=8004]]
+          </Select>
         </Query>
       </QueryList>
     ]]>

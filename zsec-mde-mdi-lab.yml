@@ -20,6 +20,8 @@
 #   Sysmon         — deep process, network, registry, and file telemetry on both hosts
 #   WEF            — Windows Event Forwarding: WKS01 forwards → DC01 (collector)
 #   MDI GPO        — AdvancedAuditPolicyDCs, DomainObjectAuditing, NTLMAuditing on DC
+#   Kerberos audit — Kerberos Authentication Service + Ticket Ops (Events 4768/4769/4770/4771) on DC
+#   DNS logging    — DNS Server diagnostics for recon detection on DC
 #   ASR Rules      — Attack Surface Reduction pre-staged on workstation for MDE
 #
 # ADCS misconfigurations (ESC1–ESC15) are configured for detection scenario testing.
@@ -308,6 +310,8 @@ ludus:
       mde_enable_dc_log_channels: true              # DFS/DNS/NTLM op logs — DC only
       mde_ds_log_size_mb: 256
       mde_ntlm_op_log_size_mb: 64
+      mde_enable_kerberos_auditing: true            # Events 4768/4769/4770/4771 — DC only
+      mde_enable_dns_diagnostic_logging: true       # DNS query logging for MDI recon detection — DC only
 
     testing:
       snapshot: true
