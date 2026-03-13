@@ -36,16 +36,11 @@ ludus range snapshot create --name post-onboarding
 
 ## Environment settings
 
-All environment-specific values are defined as YAML anchors at the top of the config. Edit before deploying:
+Environment-specific values (domain name, passwords, hostnames) appear inline throughout the config. A reference table at the top of the file lists every value and where it's used — update with find-and-replace before deploying.
 
-```yaml
-x-domain:      &domain      "zsec.local"
-x-dc-hostname: &dc-hostname "DC01"
-x-admin-pass:  &admin-pass  "D0main@dmin2026"
-# ...
-```
+Shared MDE prerequisite settings live in `global_role_vars` (applied to all VMs). DC-specific overrides live in DC01's `role_vars` and take precedence automatically.
 
-Compound FQDNs in `dns_rewrites` and SPN strings need updating separately — YAML does not support string interpolation.
+Compound FQDNs in `dns_rewrites` and SPN strings need updating separately.
 
 ## Roles
 
