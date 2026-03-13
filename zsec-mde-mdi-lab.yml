@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=https://docs.ludus.cloud/schemas/range-config.json
-# Created by @ZephrFish 
+# Created by @ZephrFish
 # https://zephrsec.com | https://blog.zsec.uk
 #
 # zsec.local Lab — MDE/MDI Detection Lab with ADCS
@@ -60,30 +60,26 @@
 #
 
 # ─── ENVIRONMENT SETTINGS ────────────────────────────────────────────────────
-# Edit the values below before deploying to a new environment.
-# Anchors are referenced throughout with *anchor-name.
-# Also update compound FQDNs in dns_rewrites and SPN strings (no YAML anchor
-# support for string interpolation).
+# Values that repeat across VMs are listed below for reference.
+# Use find-and-replace to update them before deploying to a new environment.
+# Also update compound FQDNs in dns_rewrites and SPN strings.
 #
-x-domain:         &domain         "zsec.local"
-x-netbios:        &netbios        "ZSEC"
-x-dc-hostname:    &dc-hostname    "DC01"
-x-wks-hostname:   &wks-hostname   "WKS01"
-x-ca-name:        &ca-name        "ZSEC-CA"
-x-wef-collector:  &wef-collector  "DC01.zsec.local"
-x-timezone:       &timezone       "Europe/London"
-
-# Passwords — change all of these for new deployments
-x-admin-pass:     &admin-pass     "D0main@dmin2026"
-x-user-pass:      &user-pass      "Summer2026!"
-x-safemode-pass:  &safemode-pass  "S@feM0de2026!"
+#   Domain:        zsec.local         Timezone:      Europe/London
+#   NetBIOS:       ZSEC               Admin pass:    D0main@dmin2026
+#   DC hostname:   DC01               User pass:     Summer2026!
+#   WKS hostname:  WKS01              Safemode pass: S@feM0de2026!
+#   CA name:       ZSEC-CA
+#   WEF collector: DC01.zsec.local
+#
+# Shared MDE prereqs live in global_role_vars (applies to all VMs).
+# DC-specific MDE overrides live in DC01's role_vars (takes precedence).
 
 # ─── SHARED MDE PREREQS ───────────────────────────────────────────────────────
-# Common settings applied to ALL hosts via <<: *mde-shared.
-# DC-only flags default to false here and are overridden per-VM below.
+# Applied to ALL VMs via global_role_vars. DC-specific overrides live in
+# DC01's role_vars (per-VM role_vars take precedence over global_role_vars).
 #
-x-mde-shared: &mde-shared
-  mde_enable_high_performance_power_plan: false  # true on DC (MDI sensor requires it)
+global_role_vars:
+  mde_enable_high_performance_power_plan: false
   mde_enable_cloud_protection: true
   mde_cloud_block_level: High
   mde_submit_samples_consent: NeverSend
@@ -114,13 +110,13 @@ x-mde-shared: &mde-shared
   mde_dns_log_size_mb: 32
   mde_enable_process_cmdline_audit: true
   mde_enable_advanced_audit_policy: true
-  mde_enable_ntlm_auditing: false          # DC-only — override on DC
-  mde_enable_adcs_ca_auditing: false       # DC/CA-only — override on DC
+  mde_enable_ntlm_auditing: false
+  mde_enable_adcs_ca_auditing: false
   mde_update_signatures: true
   mde_verify_defender_services: true
   mde_ensure_health_services: true
   mde_configure_restrict_remote_sam: true
-  mde_enable_ldap_diagnostic_logging: false  # DC-only — override on DC
+  mde_enable_ldap_diagnostic_logging: false
   mde_run_readiness_check: true
   mde_enable_lsa_hardening: true
   mde_lsa_run_as_ppl: 1
@@ -135,13 +131,13 @@ x-mde-shared: &mde-shared
   mde_enable_firewall_logging: true
   mde_firewall_log_size_kb: 32767
   mde_enable_extended_audit_subcategories: true
-  mde_enable_dc_log_channels: false        # DC-only — override on DC
+  mde_enable_dc_log_channels: false
 
 ludus:
 
   # ─── DC01 — Domain Controller + ADCS CA + MDI + WEF Collector ───────────────
   - vm_name: "{{ range_id }}-internal-dc01"
-    hostname: *dc-hostname
+    hostname: "DC01"
     template: win2022-server-x64-template
     vlan: 30
     ip_last_octet: 10
@@ -150,7 +146,7 @@ ludus:
     windows:
       sysprep: true
     domain:
-      fqdn: *domain
+      fqdn: "zsec.local"
       role: primary-dc
     dns_rewrites:
       - "DC01.zsec.local"
@@ -169,16 +165,16 @@ ludus:
       - mde_prereqs
     role_vars:
       # ── ADCS ──────────────────────────────────────────────────────────────────
-      ludus_adcs_ca_common_name: *ca-name
-      adcs_domain: *domain
+      ludus_adcs_ca_common_name: "ZSEC-CA"
+      adcs_domain: "zsec.local"
       adcs_configure_dc_settings: true
       adcs_enable_web_enrollment: true
       adcs_test_user: jsmith
 
       # ── AD Population ─────────────────────────────────────────────────────────
-      domain_name: *domain
-      domain_netbios: *netbios
-      domain_admin_password: *admin-pass
+      domain_name: "zsec.local"
+      domain_netbios: "ZSEC"
+      domain_admin_password: "D0main@dmin2026"
       organizational_units:
         - name: Staff
           description: "Lab staff accounts"
@@ -205,7 +201,7 @@ ludus:
         - first: John
           last: Smith
           username: jsmith
-          password: *user-pass
+          password: "Summer2026!"
           department: IT
           groups:
             - IT-Admins
@@ -300,8 +296,7 @@ ludus:
       sysmon_install_dir: "C:\\Tools\\Sysmon"
       sysmon_force_reinstall: false
 
-      # ── MDE Prerequisites — shared base + DC-specific overrides ──────────────
-      <<: *mde-shared
+      # ── MDE Prerequisites — DC-specific overrides ──────────────────────────────
       mde_enable_high_performance_power_plan: true  # MDI sensor requires high performance
       mde_enable_ntlm_auditing: true                # Event 8004 — DC/CA only
       mde_enable_adcs_ca_auditing: true             # ADCS CA audit — DC/CA only
@@ -319,7 +314,7 @@ ludus:
 
   # ─── WKS01 — Domain Workstation + MDE pre-staged ─────────────────────────────
   - vm_name: "{{ range_id }}-internal-wks01"
-    hostname: *wks-hostname
+    hostname: "WKS01"
     template: win2022-server-x64-template
     vlan: 30
     ip_last_octet: 22
@@ -329,7 +324,7 @@ ludus:
       sysprep: true
       install_additional_tools: true
     domain:
-      fqdn: *domain
+      fqdn: "zsec.local"
       role: member
     dns_rewrites:
       - "WKS01.zsec.local"
@@ -342,22 +337,19 @@ ludus:
       - mde_prereqs
     role_vars:
       # ── SMB Shares ────────────────────────────────────────────────────────────
-      domain_name: *domain
-      smb_domain: *netbios
+      domain_name: "zsec.local"
+      smb_domain: "ZSEC"
       smb_shares_base: "C:\\Shares"
       smb_create_honeypot: true
 
       # ── WEF — Forwarder pointing to DC01 ──────────────────────────────────────
       wef_mode: forwarder
-      wef_collector_server: *wef-collector
+      wef_collector_server: "DC01.zsec.local"
       wef_force_reconfigure: false
 
       # ── Sysmon ────────────────────────────────────────────────────────────────
       sysmon_install_dir: "C:\\Tools\\Sysmon"
       sysmon_force_reinstall: false
-
-      # ── MDE Prerequisites — shared base (workstation profile) ─────────────────
-      <<: *mde-shared
 
     testing:
       snapshot: true
@@ -380,8 +372,8 @@ defaults:
   ad_domain_functional_level: WinThreshold
   ad_forest_functional_level: WinThreshold
   ad_domain_admin: domainadmin
-  ad_domain_admin_password: *admin-pass
+  ad_domain_admin_password: "D0main@dmin2026"
   ad_domain_user: domainuser
-  ad_domain_user_password: *user-pass
-  ad_domain_safe_mode_password: *safemode-pass
-  timezone: *timezone
+  ad_domain_user_password: "Summer2026!"
+  ad_domain_safe_mode_password: "S@feM0de2026!"
+  timezone: "Europe/London"
