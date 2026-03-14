@@ -35,8 +35,13 @@ if ($sysmonService -and -not $Force) {
         throw "Sysmon config update failed (exit code: $LASTEXITCODE)"
     }
 } else {
+    # Clean up any partial/stale installation before fresh install
+    Write-Host "[*] Removing any stale Sysmon installation..." -ForegroundColor Yellow
+    & "$SysmonDir\Sysmon64.exe" -u force 2>&1 | Out-Null
+    Start-Sleep -Seconds 2
+
     Write-Host "[*] Installing Sysmon64..." -ForegroundColor Yellow
-    & "$SysmonDir\Sysmon64.exe" -accepteula -i $ConfigPath 2>&1
+    & "$SysmonDir\Sysmon64.exe" -i -accepteula $ConfigPath 2>&1
     if ($LASTEXITCODE -ne 0) {
         throw "Sysmon install failed (exit code: $LASTEXITCODE)"
     }
