@@ -14,14 +14,14 @@ Write-Host "[*] Deploying Sysmon configuration..." -ForegroundColor Cyan
 if (Test-Path $ConfigPath) {
     Write-Host "[+] Using bundled Sysmon config: $ConfigPath" -ForegroundColor Green
 } else {
-    Write-Host "[!] Bundled config not found — attempting download..." -ForegroundColor Yellow
+    Write-Host "[!] Bundled config not found -- attempting download..." -ForegroundColor Yellow
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         Invoke-WebRequest -Uri $ConfigUrl -OutFile $ConfigPath -UseBasicParsing
         Write-Host "[+] Downloaded Sysmon config to $ConfigPath" -ForegroundColor Green
     } catch {
         Write-Host "[!] Download failed: $_" -ForegroundColor Red
-        Write-Host "[!] No config available — aborting Sysmon install" -ForegroundColor Red
+        Write-Host "[!] No config available -- aborting Sysmon install" -ForegroundColor Red
         exit 1
     }
 }
@@ -47,5 +47,5 @@ $svc = Get-Service -Name Sysmon64 -ErrorAction SilentlyContinue
 if ($svc -and $svc.Status -eq "Running") {
     Write-Host "[+] Sysmon64 is running" -ForegroundColor Green
 } else {
-    throw "Sysmon64 service not running — install may have failed silently"
+    throw "Sysmon64 service not running -- install may have failed silently"
 }

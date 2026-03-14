@@ -25,7 +25,7 @@ if ($Mode -eq 'Collector') {
         $subId = "ZSec-MDI-Events"
         $existing = wecutil gs $subId 2>&1
         if ($LASTEXITCODE -eq 0 -and -not $Force) {
-            Write-Host "[=] WEF subscription '$subId' already exists — skipping (use -Force to recreate)" -ForegroundColor DarkGray
+            Write-Host "[=] WEF subscription '$subId' already exists -- skipping (use -Force to recreate)" -ForegroundColor DarkGray
         } else {
             if ($LASTEXITCODE -eq 0) {
                 wecutil ds $subId 2>&1 | Out-Null
@@ -35,11 +35,11 @@ if ($Mode -eq 'Collector') {
             if ($LASTEXITCODE -eq 0) {
                 Write-Host "[+] WEF subscription '$subId' created from $SubscriptionXmlPath" -ForegroundColor Green
             } else {
-                throw "Failed to create WEF subscription (exit code: $LASTEXITCODE) — check $SubscriptionXmlPath"
+                throw "Failed to create WEF subscription (exit code: $LASTEXITCODE) -- check $SubscriptionXmlPath"
             }
         }
     } else {
-        Write-Host "[!] No subscription XML supplied — collector started without subscriptions." -ForegroundColor Yellow
+        Write-Host "[!] No subscription XML supplied -- collector started without subscriptions." -ForegroundColor Yellow
         Write-Host "    Copy zsec-wef-subscription.xml to C:\Tools\WEF\ and re-run with -SubscriptionXmlPath" -ForegroundColor Yellow
     }
 
