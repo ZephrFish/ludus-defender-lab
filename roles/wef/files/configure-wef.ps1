@@ -35,8 +35,7 @@ if ($Mode -eq 'Collector') {
             if ($LASTEXITCODE -eq 0) {
                 Write-Host "[+] WEF subscription '$subId' created from $SubscriptionXmlPath" -ForegroundColor Green
             } else {
-                Write-Host "[!] Failed to create WEF subscription (exit code: $LASTEXITCODE) — check $SubscriptionXmlPath" -ForegroundColor Red
-                exit 1
+                throw "Failed to create WEF subscription (exit code: $LASTEXITCODE) — check $SubscriptionXmlPath"
             }
         }
     } else {
