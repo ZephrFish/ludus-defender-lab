@@ -41,7 +41,7 @@ if ($sysmonService -and -not $Force) {
     Start-Sleep -Seconds 2
 
     Write-Host "[*] Installing Sysmon64..." -ForegroundColor Yellow
-    & "$SysmonDir\Sysmon64.exe" -i -accepteula $ConfigPath 2>&1
+    & "$SysmonDir\Sysmon64.exe" -accepteula -i $ConfigPath 2>&1
     if ($LASTEXITCODE -ne 0) {
         throw "Sysmon install failed (exit code: $LASTEXITCODE)"
     }
