@@ -32,10 +32,18 @@ if ($Mode -eq 'Collector') {
                 Write-Host "[*] Deleted existing subscription '$subId' for recreation" -ForegroundColor Yellow
             }
             wecutil cs $SubscriptionXmlPath 2>&1
+            $csExit = $LASTEXITCODE
+            # Verify subscription was saved (wecutil cs may return non-zero
+            # e.g. 15080 when saved but can't activate -- no forwarders yet)
+            $verify = wecutil gs $subId 2>&1
             if ($LASTEXITCODE -eq 0) {
-                Write-Host "[+] WEF subscription '$subId' created from $SubscriptionXmlPath" -ForegroundColor Green
+                if ($csExit -ne 0) {
+                    Write-Host "[+] WEF subscription '$subId' saved (activation pending -- forwarders not yet connected)" -ForegroundColor Yellow
+                } else {
+                    Write-Host "[+] WEF subscription '$subId' created from $SubscriptionXmlPath" -ForegroundColor Green
+                }
             } else {
-                throw "Failed to create WEF subscription (exit code: $LASTEXITCODE) -- check $SubscriptionXmlPath"
+                throw "Failed to create WEF subscription (exit code: $csExit) -- check $SubscriptionXmlPath"
             }
         }
     } else {
