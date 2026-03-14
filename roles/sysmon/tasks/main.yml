@@ -98,12 +98,19 @@
       changed_when: true
       when: not sysmon_already_installed
 
+    - name: Wait for Sysmon service registration
+      ansible.windows.win_powershell:
+        script: Start-Sleep -Seconds 5
+      changed_when: false
+
     - name: Verify Sysmon service is running
       ansible.windows.win_service:
         name: Sysmon64
         state: started
       register: sysmon_service
-      ignore_errors: true
+      retries: 3
+      delay: 5
+      until: sysmon_service is not failed
 
   rescue:
     - name: Log Sysmon deployment failure
