@@ -43,19 +43,19 @@
       ansible.windows.win_powershell:
         script: |
           Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
-          $params = @('-Force', '-SkipDCConfig')
-          if (-not {{ adcs_enable_esc1  | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC1'  }
-          if (-not {{ adcs_enable_esc2  | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC2'  }
-          if (-not {{ adcs_enable_esc3  | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC3'  }
-          if (-not {{ adcs_enable_esc4  | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC4'  }
-          if (-not {{ adcs_enable_esc5  | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC5'  }
-          if (-not {{ adcs_enable_esc6  | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC6'  }
-          if (-not {{ adcs_enable_esc7  | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC7'  }
-          if (-not {{ adcs_enable_esc8  | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC8'  }
-          if (-not {{ adcs_enable_esc11 | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC11' }
-          if (-not {{ adcs_enable_esc13 | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC13' }
-          if (-not {{ adcs_enable_esc14 | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC14' }
-          if (-not {{ adcs_enable_esc15 | default(true) | ternary('$true', '$false') }}) { $params += '-SkipESC15' }
+          $params = @{ Force = $true; SkipDCConfig = $true }
+          if (-not {{ adcs_enable_esc1  | default(true) | ternary('$true', '$false') }}) { $params['SkipESC1']  = $true }
+          if (-not {{ adcs_enable_esc2  | default(true) | ternary('$true', '$false') }}) { $params['SkipESC2']  = $true }
+          if (-not {{ adcs_enable_esc3  | default(true) | ternary('$true', '$false') }}) { $params['SkipESC3']  = $true }
+          if (-not {{ adcs_enable_esc4  | default(true) | ternary('$true', '$false') }}) { $params['SkipESC4']  = $true }
+          if (-not {{ adcs_enable_esc5  | default(true) | ternary('$true', '$false') }}) { $params['SkipESC5']  = $true }
+          if (-not {{ adcs_enable_esc6  | default(true) | ternary('$true', '$false') }}) { $params['SkipESC6']  = $true }
+          if (-not {{ adcs_enable_esc7  | default(true) | ternary('$true', '$false') }}) { $params['SkipESC7']  = $true }
+          if (-not {{ adcs_enable_esc8  | default(true) | ternary('$true', '$false') }}) { $params['SkipESC8']  = $true }
+          if (-not {{ adcs_enable_esc11 | default(true) | ternary('$true', '$false') }}) { $params['SkipESC11'] = $true }
+          if (-not {{ adcs_enable_esc13 | default(true) | ternary('$true', '$false') }}) { $params['SkipESC13'] = $true }
+          if (-not {{ adcs_enable_esc14 | default(true) | ternary('$true', '$false') }}) { $params['SkipESC14'] = $true }
+          if (-not {{ adcs_enable_esc15 | default(true) | ternary('$true', '$false') }}) { $params['SkipESC15'] = $true }
           & C:\Tools\ADCS\deploy-adcs-esc-lab.ps1 @params
       register: adcs_result
       changed_when: true
