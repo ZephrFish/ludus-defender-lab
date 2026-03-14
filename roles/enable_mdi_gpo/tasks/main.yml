@@ -71,15 +71,16 @@
         - not mdi_module_staged.stat.exists
 
     - name: Configure MDI audit GPOs via Set-MDIConfiguration
-      ansible.windows.win_powershell:
-        script: |
-          $ErrorActionPreference = "Stop"
-          Import-Module ActiveDirectory    -ErrorAction Stop
-          Import-Module DefenderForIdentity -ErrorAction Stop
-          Set-MDIConfiguration -Mode Domain -Configuration All -GpoNamePrefix "{{ mdi_gpo_prefix }}" -Confirm:$false
-          Write-Output "MDI_CONFIGURED"
+      # Set-MDIConfiguration calls Read-Host for confirmation internally and has
+      # no -Force switch. WinRM is non-interactive so Read-Host fails. Use
+      # win_shell (cmd.exe) to pipe "Y" through stdin to satisfy the prompt.
+      ansible.windows.win_shell: >-
+        echo Y | powershell.exe -ExecutionPolicy Bypass -Command
+        "Import-Module DefenderForIdentity -ErrorAction Stop;
+        Set-MDIConfiguration -Mode Domain -Configuration All
+        -GpoNamePrefix '{{ mdi_gpo_prefix }}'"
       register: mdi_configure_result
-      changed_when: "'MDI_CONFIGURED' in (mdi_configure_result.output | join(''))"
+      changed_when: true
       when: >-
         'MDI_GPO_MISSING' in (mdi_gpo_check.output | join('')) or
         mdi_force_reconfigure | default(false)
