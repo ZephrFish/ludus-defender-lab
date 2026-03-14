@@ -31,9 +31,17 @@ $sysmonService = Get-Service -Name Sysmon64 -ErrorAction SilentlyContinue
 if ($sysmonService -and -not $Force) {
     Write-Host "[*] Sysmon already installed, updating config..." -ForegroundColor Yellow
     & "$SysmonDir\Sysmon64.exe" -c $ConfigPath 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[!] Sysmon config update failed (exit code: $LASTEXITCODE)" -ForegroundColor Red
+        exit 1
+    }
 } else {
     Write-Host "[*] Installing Sysmon64..." -ForegroundColor Yellow
     & "$SysmonDir\Sysmon64.exe" -accepteula -i $ConfigPath 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[!] Sysmon install failed (exit code: $LASTEXITCODE)" -ForegroundColor Red
+        exit 1
+    }
 }
 
 # Verify
@@ -41,5 +49,6 @@ $svc = Get-Service -Name Sysmon64 -ErrorAction SilentlyContinue
 if ($svc -and $svc.Status -eq "Running") {
     Write-Host "[+] Sysmon64 is running" -ForegroundColor Green
 } else {
-    Write-Host "[!] Sysmon64 service not running" -ForegroundColor Red
+    Write-Host "[!] Sysmon64 service not running — install may have failed silently" -ForegroundColor Red
+    exit 1
 }
