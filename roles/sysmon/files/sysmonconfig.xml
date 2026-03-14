@@ -81,14 +81,8 @@
       </NetworkConnect>
     </RuleGroup>
 
-    <!-- ================================================================
-         EVENT 4: Sysmon Service State Changed — always log
-         ================================================================ -->
-    <RuleGroup name="" groupRelation="or">
-      <ServiceStateChange onmatch="include">
-        <State condition="is">Stopped</State>
-      </ServiceStateChange>
-    </RuleGroup>
+    <!-- EVENT 4: Sysmon Service State Changed — always logged by Sysmon,
+         not configurable via XML (ServiceStateChange is not in the schema) -->
 
     <!-- ================================================================
          EVENT 5: Process Terminated — exclude all (too noisy for lab)
