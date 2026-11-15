@@ -23,7 +23,7 @@ adcs_enable_web_enrollment: true
 adcs_configure_dc_settings: false
 
 # ESC vulnerability toggles
-# NOTE: These variables are currently informational only — the deploy-adcs-esc-lab.ps1
+# NOTE: These variables are currently informational only - the deploy-adcs-esc-lab.ps1
 # script enables all ESC paths unconditionally. To selectively enable/disable ESC paths,
 # the PowerShell script would need to accept and check these flags as parameters.
 # Future work: pass -EnableESC1 ${{ adcs_enable_esc1 }} etc. to the script.

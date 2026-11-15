@@ -9,7 +9,7 @@ chisel_version: "1.9.1"
 # Ligolo-ng version to download (must match a GitHub release tag)
 ligolo_version: "0.6.2"
 
-# Pre-staged binary paths (optional) — set these to skip GitHub downloads.
+# Pre-staged binary paths (optional) - set these to skip GitHub downloads.
 # Use scripts/pre-download-tools.sh to download binaries to your local machine first.
 # Example:
 #   chisel_local_binary: /home/user/staged-tools/chisel_1.9.1_linux_amd64.gz

@@ -3,7 +3,7 @@
 # https://zephrsec.com | https://blog.zsec.uk
 # adcs_lab - Configure ADCS for ESC1-16 attack paths
 # Target: DC01
-# Attack surface: ESC1-ESC15 ADCS attack paths — see ATTACK_PLAN.md
+# Attack surface: ESC1-ESC15 ADCS attack paths - see ATTACK_PLAN.md
 
 # =============================================================================
 # Pre-flight assertions

@@ -58,7 +58,7 @@ if ! command -v ludus &>/dev/null; then
     exit 1
 fi
 
-# Check LUDUS_API_KEY is set — without it, ludus cannot authenticate over SSH
+# Check LUDUS_API_KEY is set - without it, ludus cannot authenticate over SSH
 # (the system keyring is unavailable in SSH sessions, so all role installs silently fail)
 if [ -z "$LUDUS_API_KEY" ]; then
     echo "ERROR: LUDUS_API_KEY is not set."
@@ -111,7 +111,7 @@ fi
 ROLE_COUNT=$(find "$ROLES_DIR" -maxdepth 2 -name "main.yml" -path "*/tasks/*" | wc -l | tr -d ' ')
 echo "Found $ROLE_COUNT custom roles to install."
 if [ -n "$FORCE_FLAG" ]; then
-    echo "Mode: FORCE UPDATE — all roles will be reinstalled from this bundle."
+    echo "Mode: FORCE UPDATE - all roles will be reinstalled from this bundle."
 fi
 echo ""
 
@@ -120,7 +120,7 @@ echo "--- Installing Community Roles ---"
 for role in badsectorlabs.ludus_adcs; do
     echo "  Installing: $role"
     if ! ludus ansible role add $FORCE_FLAG "$role" 2>/dev/null; then
-        echo "    (already installed or network unavailable — skipping)"
+        echo "    (already installed or network unavailable - skipping)"
     fi
 done
 echo ""

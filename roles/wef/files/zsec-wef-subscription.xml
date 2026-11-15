@@ -1,7 +1,7 @@
 <Subscription xmlns="http://schemas.microsoft.com/2006/03/windows/events/subscription">
   <SubscriptionId>ZSec-MDI-Events</SubscriptionId>
   <SubscriptionType>SourceInitiated</SubscriptionType>
-  <Description>ZSec lab — source-initiated WEF subscription covering MDI/MDE-relevant events</Description>
+  <Description>ZSec lab - source-initiated WEF subscription covering MDI/MDE-relevant events</Description>
   <Enabled>true</Enabled>
   <Uri>http://schemas.microsoft.com/wbem/wsman/1/windows/EventLog</Uri>
 
@@ -23,20 +23,20 @@
 
   <!--
     Query covers:
-      Security log     — logon/logoff, privilege use, account/group management,
+      Security log     - logon/logoff, privilege use, account/group management,
                          ADCS (4886/4887/4888), Kerberos (4768/4769/4771/4776),
                          process creation (4688), object access (4662/4663/4670),
                          service install (4697), token right adjusted (4703)
-      System log       — service installs (7045), service state changes (7036/7040)
-      Sysmon           — all events (rich process/network/file telemetry)
-      PowerShell       — script block (4104), module (4103), pipeline (4105/4106)
-      Defender         — all events
-      WMI-Activity     — query execution (5857/5858/5860/5861) for WMI persistence
-      TaskScheduler    — task registration/execution (106/140/141/200/201)
-      BITS-Client      — job creation/completion (59/60/61) for BITS persistence
-      TerminalServices — RDP session events (21/23/24/25) for lateral movement
-      CAPI2            — certificate chain/enrollment events for ADCS abuse detection
-      NTLM/Operational — NTLM audit events (8001/8002/8003/8004)
+      System log       - service installs (7045), service state changes (7036/7040)
+      Sysmon           - all events (rich process/network/file telemetry)
+      PowerShell       - script block (4104), module (4103), pipeline (4105/4106)
+      Defender         - all events
+      WMI-Activity     - query execution (5857/5858/5860/5861) for WMI persistence
+      TaskScheduler    - task registration/execution (106/140/141/200/201)
+      BITS-Client      - job creation/completion (59/60/61) for BITS persistence
+      TerminalServices - RDP session events (21/23/24/25) for lateral movement
+      CAPI2            - certificate chain/enrollment events for ADCS abuse detection
+      NTLM/Operational - NTLM audit events (8001/8002/8003/8004)
   -->
   <Query>
     <![CDATA[
@@ -130,10 +130,10 @@
 
   <!--
     AllowedSourceDomainComputers SDDL:
-      O:NS          — owner: Network Service
-      G:NS          — group: Network Service
-      D:(A;;GA;;;DC) — allow Domain Controllers (DC SID)
-        (A;;GA;;;DD) — allow Domain Computers (DD SID)
+      O:NS          - owner: Network Service
+      G:NS          - group: Network Service
+      D:(A;;GA;;;DC) - allow Domain Controllers (DC SID)
+        (A;;GA;;;DD) - allow Domain Computers (DD SID)
     Both groups are automatically granted GA (Generic All) so any domain-joined
     Windows host can forward events to this collector.
   -->

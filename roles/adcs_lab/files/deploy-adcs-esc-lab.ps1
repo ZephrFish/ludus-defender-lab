@@ -41,7 +41,7 @@ param(
     [switch]$SkipDCConfig,    # Skip DC registry configuration (ESC9/ESC10)
     [string]$DCHostname,      # DC hostname for remote registry (default: auto-detect)
 
-    # Per-ESC toggle switches — pass -SkipESC1 etc. to skip individual attack paths.
+    # Per-ESC toggle switches - pass -SkipESC1 etc. to skip individual attack paths.
     # All paths are enabled by default when -Force is used (Ansible controlled via role_vars).
     [switch]$SkipESC1,
     [switch]$SkipESC2,

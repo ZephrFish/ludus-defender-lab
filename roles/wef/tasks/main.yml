@@ -11,14 +11,14 @@
       - inventory_hostname is defined
       - wef_mode is defined
       - wef_mode in ['collector', 'forwarder']
-    fail_msg: "wef_mode must be defined and set to 'collector' or 'forwarder' — check your role_vars"
+    fail_msg: "wef_mode must be defined and set to 'collector' or 'forwarder' - check your role_vars"
     success_msg: "Pre-flight variable check passed"
 
 - name: Assert wef_collector_server is set when mode is forwarder
   ansible.builtin.assert:
     that:
       - wef_collector_server | default('') | length > 0
-    fail_msg: "wef_collector_server must be defined and non-empty when wef_mode is 'forwarder' — set it in role_vars"
+    fail_msg: "wef_collector_server must be defined and non-empty when wef_mode is 'forwarder' - set it in role_vars"
     success_msg: "wef_collector_server defined: OK"
   when: wef_mode == 'forwarder'
 
@@ -98,7 +98,7 @@
 
     - name: Warn if WEF subscription is missing (collector only)
       ansible.builtin.debug:
-        msg: "WARNING: WEF subscription not found — {{ wef_sub_check.output | join(' ') }}"
+        msg: "WARNING: WEF subscription not found - {{ wef_sub_check.output | join(' ') }}"
       when:
         - wef_mode == 'collector'
         - wef_sub_check is defined
@@ -186,7 +186,7 @@
   ansible.builtin.debug:
     msg:
       - "════════════════════════════════════════════"
-      - "  wef — Deployment Complete"
+      - "  wef - Deployment Complete"
       - "════════════════════════════════════════════"
       - "  Mode         : {{ wef_mode | default('collector') }}"
       - "  WinRM        : Running"

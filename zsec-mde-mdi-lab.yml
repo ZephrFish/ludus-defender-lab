@@ -2,7 +2,7 @@
 # Created by @ZephrFish
 # https://zephrsec.com | https://blog.zsec.uk
 #
-# zsec.local Lab — MDE/MDI Detection Lab with ADCS
+# zsec.local Lab - MDE/MDI Detection Lab with ADCS
 # 2 VMs, 10 vCPU, ~12 GB RAM
 #
 # VLAN layout:
@@ -12,41 +12,57 @@
 # Purpose:
 #   Domain lab configured for maximum logging and telemetry, pre-staged for
 #   Microsoft Defender for Endpoint (MDE) and Microsoft Defender for Identity
-#   (MDI) deployment from your Azure subscription. Includes a fully configured
-#   ADCS installation with ESC1–ESC15 misconfigurations for detection coverage
-#   testing.
+#   (MDI v3 unified sensor) deployment from your Azure subscription. Includes a
+#   fully configured ADCS installation with ESC1-ESC15 misconfigurations for
+#   detection coverage testing.
 #
 # Logging/telemetry stack:
-#   Sysmon         — deep process, network, registry, and file telemetry on both hosts
-#   WEF            — Windows Event Forwarding: WKS01 forwards → DC01 (collector)
-#   MDI GPO        — AdvancedAuditPolicyDCs, DomainObjectAuditing, NTLMAuditing on DC
-#   Kerberos audit — Kerberos Authentication Service + Ticket Ops (Events 4768/4769/4770/4771) on DC
-#   DNS logging    — DNS Server diagnostics for recon detection on DC
-#   ASR Rules      — Attack Surface Reduction pre-staged on workstation for MDE
+#   Sysmon         - deep process, network, registry, and file telemetry on both hosts
+#   WEF            - Windows Event Forwarding: WKS01 forwards -> DC01 (collector)
+#   MDI GPO        - AdvancedAuditPolicyDCs, DomainObjectAuditing, NTLMAuditing on DC
+#   Kerberos audit - Kerberos Authentication Service + Ticket Ops (Events 4768/4769/4770/4771) on DC
+#   DNS logging    - DNS Server diagnostics for recon detection on DC
+#   ASR Rules      - Attack Surface Reduction pre-staged on workstation for MDE
 #
-# ADCS misconfigurations (ESC1–ESC15) are configured for detection scenario testing.
-# MDE and MDI are NOT auto-installed — onboard both from security.microsoft.com
-# after deploying this lab.
+# ADCS misconfigurations (ESC1-ESC15) are configured for detection scenario testing.
+# MDE and MDI are NOT auto-installed - onboard MDE from security.microsoft.com,
+# then activate the MDI v3 unified sensor from the Defender portal.
 #
-# Required roles — install before deploying:
+# Required roles - install before deploying:
 #   ./roles/install-roles.sh
 #   Installs all custom roles (enable_asr, enable_mdi_gpo, mde_prereqs, etc.)
 #   and the badsectorlabs.ludus_adcs community role from Ansible Galaxy.
 #
-# Roles per VM:
+# Roles per VM (order matters - enable_mdi_gpo needs AD/GP modules from RSAT):
 #   DC01   badsectorlabs.ludus_adcs · adcs_lab · ad_population
 #          smb_shares · enable_mdi_gpo · sysmon
 #          wef (collector) · mde_prereqs
 #   WKS01  rsat · smb_shares · sysmon · wef (forwarder)
 #          enable_asr · mde_prereqs
 #
-# Post-deploy MDE/MDI onboarding:
-#   1. MDE  — Download onboarding script from security.microsoft.com → Endpoints →
-#             Device management → Onboarding → Windows Server 2022.
+# Post-deploy MDE/MDI onboarding (MDI v3 unified sensor):
+#   0. PATCH - Ensure DC01 and WKS01 have the September 2026 (or later)
+#              cumulative update installed. MDI v3 sensor activation will fail
+#              without it. Check with: Get-HotFix | Sort InstalledOn -Desc | Select -First 5
+#   1. MDE  - Download onboarding script from security.microsoft.com -> Endpoints ->
+#             Device management -> Onboarding -> Windows Server 2022.
 #             Run on both DC01 and WKS01.
-#   2. MDI  — In the Microsoft Defender portal, navigate to Settings → Identities →
-#             Sensors → Add sensor. Download and run the MDI sensor installer on DC01.
-#             The MDI GPO role has pre-configured the required audit policies.
+#   2. MDI  - MDI v3 uses the unified MDE sensor (no standalone installer).
+#             In the Defender portal:
+#               a. Settings -> Identities -> Sensors - DC01 should appear as
+#                  eligible after MDE onboarding. Select it and click Activate.
+#               b. Optionally enable automatic activation and automatic Windows
+#                  auditing under Settings -> Identities -> Advanced features.
+#                  (The enable_mdi_gpo and mde_prereqs roles already configure
+#                  audit policies manually - automatic auditing is belt-and-suspenders.)
+#               c. First activation can take up to an hour to show as Running.
+#   3. ACTION ACCOUNT - Settings -> Identities -> Microsoft Defender for Identity ->
+#             Manage action accounts. Add svc_mdi as the action account to enable
+#             automated response (disable user, force password reset, attack disruption).
+#             The v3 sensor itself runs as LocalSystem - no DSA assignment needed.
+#   4. HONEYTOKENS - Settings -> Identities -> Entity tags -> Honeytoken.
+#             Tag svc_honey as a honeytoken account for alerting on access.
+#   5. VERIFY - Run Test-MdiReadiness.ps1 on DC01 to confirm all prerequisites.
 #
 # Deploy:
 #   ludus range config set -f zsec-mde-mdi-lab.yml
@@ -135,7 +151,7 @@ global_role_vars:
 
 ludus:
 
-  # ─── DC01 — Domain Controller + ADCS CA + MDI + WEF Collector ───────────────
+  # ─── DC01 - Domain Controller + ADCS CA + MDI + WEF Collector ───────────────
   - vm_name: "{{ range_id }}-internal-dc01"
     hostname: "DC01"
     template: win2022-server-x64-template
@@ -281,13 +297,21 @@ ludus:
           password: "D3pl0y@utomation!"
           groups:
             - Backup-Operators
-        # MDI Directory Service Account — read access to all domain objects.
-        # Assign this account in the MDI sensor configuration after onboarding.
+        # MDI Action Account - used for automated response actions (disable user,
+        # force password reset, attack disruption) in the Defender portal.
+        # The v3 sensor runs as LocalSystem and does not need a DSA assignment.
+        # Configure this account under Settings -> Identities -> Manage action accounts.
         - name: svc_mdi
           password: "MdiSensor2026!@"
+          groups:
+            - IT-Admins
+        # Honeytoken account - tag in Defender portal under Entity tags -> Honeytoken.
+        # Any authentication or access attempt triggers an MDI alert.
+        - name: svc_honey
+          password: "H0neyP0t2026!@"
           groups: []
 
-      # ── WEF — Collector mode on DC ────────────────────────────────────────────
+      # ── WEF - Collector mode on DC ────────────────────────────────────────────
       wef_mode: collector
       wef_create_gpo: true
       wef_force_reconfigure: false
@@ -296,23 +320,23 @@ ludus:
       sysmon_install_dir: "C:\\Tools\\Sysmon"
       sysmon_force_reinstall: false
 
-      # ── MDE Prerequisites — DC-specific overrides ──────────────────────────────
+      # ── MDE Prerequisites - DC-specific overrides ──────────────────────────────
       mde_enable_high_performance_power_plan: true  # MDI sensor requires high performance
-      mde_enable_ntlm_auditing: true                # Event 8004 — DC/CA only
-      mde_enable_adcs_ca_auditing: true             # ADCS CA audit — DC/CA only
-      mde_enable_ldap_diagnostic_logging: true      # Event 1644 for MDI LDAP recon — DC only
+      mde_enable_ntlm_auditing: true                # Event 8004 - DC/CA only
+      mde_enable_adcs_ca_auditing: true             # ADCS CA audit - DC/CA only
+      mde_enable_ldap_diagnostic_logging: true      # Event 1644 for MDI LDAP recon - DC only
       mde_ldap_diagnostic_level: 5
-      mde_enable_dc_log_channels: true              # DFS/DNS/NTLM op logs — DC only
+      mde_enable_dc_log_channels: true              # DFS/DNS/NTLM op logs - DC only
       mde_ds_log_size_mb: 256
       mde_ntlm_op_log_size_mb: 64
-      mde_enable_kerberos_auditing: true            # Events 4768/4769/4770/4771 — DC only
-      mde_enable_dns_diagnostic_logging: true       # DNS query logging for MDI recon detection — DC only
+      mde_enable_kerberos_auditing: true            # Events 4768/4769/4770/4771 - DC only
+      mde_enable_dns_diagnostic_logging: true       # DNS query logging for MDI recon detection - DC only
 
     testing:
       snapshot: true
-      block_internet: false
+      block_internet: false  # MDE/MDI require internet for cloud connectivity - do not set to true
 
-  # ─── WKS01 — Domain Workstation + MDE pre-staged ─────────────────────────────
+  # ─── WKS01 - Domain Workstation + MDE pre-staged ─────────────────────────────
   - vm_name: "{{ range_id }}-internal-wks01"
     hostname: "WKS01"
     template: win2022-server-x64-template
@@ -342,7 +366,7 @@ ludus:
       smb_shares_base: "C:\\Shares"
       smb_create_honeypot: true
 
-      # ── WEF — Forwarder pointing to DC01 ──────────────────────────────────────
+      # ── WEF - Forwarder pointing to DC01 ──────────────────────────────────────
       wef_mode: forwarder
       wef_collector_server: "DC01.zsec.local"
       wef_force_reconfigure: false
@@ -353,7 +377,7 @@ ludus:
 
     testing:
       snapshot: true
-      block_internet: false
+      block_internet: false  # MDE/MDI require internet for cloud connectivity - do not set to true
 
 network:
   inter_vlan_default: REJECT

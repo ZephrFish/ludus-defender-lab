@@ -10,7 +10,7 @@
       - ansible_host is defined
       - inventory_hostname is defined
       - sysmon_install_dir is defined
-    fail_msg: "Required Ansible variables are not defined — ensure sysmon_install_dir is set and the deploy script is present"
+    fail_msg: "Required Ansible variables are not defined - ensure sysmon_install_dir is set and the deploy script is present"
     success_msg: "Pre-flight variable check passed"
 
 - name: Check if Sysmon already installed
@@ -157,7 +157,7 @@
   ansible.builtin.debug:
     msg:
       - "════════════════════════════════════════════"
-      - "  sysmon — Deployment Complete"
+      - "  sysmon - Deployment Complete"
       - "════════════════════════════════════════════"
       - "  Service   : Sysmon64"
       - "  Config    : {{ sysmon_install_dir | default('C:\\Tools\\Sysmon') }}\\sysmonconfig.xml"

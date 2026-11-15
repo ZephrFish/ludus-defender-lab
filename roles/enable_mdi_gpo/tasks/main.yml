@@ -1,9 +1,9 @@
 ---
-# enable_mdi_gpo — apply MDI audit GPO configuration on the domain controller.
+# enable_mdi_gpo - apply MDI audit GPO configuration on the domain controller.
 #
 # Module installation strategy (in priority order):
-#   1. Offline  — copy DefenderForIdentity/ from role files/ if pre-staged by Save-MDIModule.ps1
-#   2. Online   — install from PSGallery (DC needs internet access)
+#   1. Offline  - copy DefenderForIdentity/ from role files/ if pre-staged by Save-MDIModule.ps1
+#   2. Online   - install from PSGallery (DC needs internet access)
 #
 # To pre-stage the module and avoid the internet dependency:
 #   cd roles/enable_mdi_gpo/files/
@@ -36,7 +36,7 @@
       changed_when: false
       failed_when: false
 
-    # Always check controller — stat on localhost is instant and avoids undefined-variable
+    # Always check controller - stat on localhost is instant and avoids undefined-variable
     # issues in later when: conditions when the check task would otherwise be skipped.
     - name: Check for pre-staged DefenderForIdentity module on Ansible controller
       ansible.builtin.stat:
@@ -105,27 +105,28 @@
         msg:
           - "MDI GPO configuration FAILED on {{ inventory_hostname }}"
           - "Common causes:"
-          - "  1. No pre-staged module and no internet — PSGallery unreachable"
+          - "  1. No pre-staged module and no internet - PSGallery unreachable"
           - "     Fix: run files/Save-MDIModule.ps1 on an internet-connected machine,"
           - "          copy the DefenderForIdentity/ folder into files/, then redeploy"
-          - "  2. ActiveDirectory module missing — deploy rsat before this role"
-          - "  3. Set-MDIConfiguration failed — check DC event log for GroupPolicy errors"
+          - "  2. ActiveDirectory module missing - deploy rsat before this role"
+          - "  3. Set-MDIConfiguration failed - check DC event log for GroupPolicy errors"
           - "Pre-stage: cd roles/enable_mdi_gpo/files/ && .\\Save-MDIModule.ps1"
 
     - name: Fail with clear message
       ansible.builtin.fail:
-        msg: "enable_mdi_gpo FAILED on {{ inventory_hostname }} — see above for details"
+        msg: "enable_mdi_gpo FAILED on {{ inventory_hostname }} - see above for details"
 
 - name: Show MDI GPO deployment status
   ansible.builtin.debug:
     msg:
       - "════════════════════════════════════════════"
-      - "  enable_mdi_gpo — Complete"
+      - "  enable_mdi_gpo - Complete"
       - "════════════════════════════════════════════"
       - "  Host     : {{ inventory_hostname }}"
       - "  GPO      : {{ mdi_gpo_prefix }}* GPOs applied to domain"
-      - "  Note     : Assign svc_mdi as the MDI sensor service account"
-      - "             in the Microsoft Defender portal after onboarding"
+      - "  Note     : MDI v3 sensor runs as LocalSystem (no DSA needed)."
+      - "             Add svc_mdi as the action account in the portal for"
+      - "             automated response (Settings -> Identities -> Manage action accounts)"
       - "════════════════════════════════════════════"
 
 - name: Log successful MDI GPO deployment

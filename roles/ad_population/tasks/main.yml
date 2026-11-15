@@ -395,7 +395,7 @@
     dest: "C:\\Tools\\ad-population-summary.txt"
     content: |
       ═══════════════════════════════════════════════════════════════
-      ZSEC Active Directory Population Summary — OPERATOR USE ONLY
+      ZSEC Active Directory Population Summary - OPERATOR USE ONLY
       Domain: {{ domain_name | default('zsec.local') }}
       ═══════════════════════════════════════════════════════════════
 
@@ -415,7 +415,7 @@
       STANDARD USERS ({{ standard_users | length }})
       ────────────────────
       {% for u in standard_users %}
-      {{ u.username }}: {{ u.password }}  [{{ u.department | default('') }}]{% if u.groups | default([]) %} — groups: {{ u.groups | join(', ') }}{% endif %}
+      {{ u.username }}: {{ u.password }}  [{{ u.department | default('') }}]{% if u.groups | default([]) %} - groups: {{ u.groups | join(', ') }}{% endif %}
 
       {% endfor %}
 
@@ -434,7 +434,7 @@
       HIGH-VALUE ACCOUNTS ({{ high_value_accounts | length }})
       ───────────────────────
       {% for a in high_value_accounts %}
-      {{ a.name }}: {{ a.password }}{% if a.groups | default([]) %} — groups: {{ a.groups | join(', ') }}{% endif %}
+      {{ a.name }}: {{ a.password }}{% if a.groups | default([]) %} - groups: {{ a.groups | join(', ') }}{% endif %}
 
       {% endfor %}
 
@@ -459,7 +459,7 @@
   ansible.builtin.debug:
     msg:
       - "════════════════════════════════════════════"
-      - "  ad_population — Complete"
+      - "  ad_population - Complete"
       - "════════════════════════════════════════════"
       - "  Domain        : {{ domain_name | default('zsec.local') }}"
       - "  OUs Created   : IT, HR, Finance, Management, ServiceAccounts"

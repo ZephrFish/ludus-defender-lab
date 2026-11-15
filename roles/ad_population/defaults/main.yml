@@ -2,7 +2,7 @@
 # Created by @ZephrFish 
 # https://zephrsec.com | https://blog.zsec.uk
 domain_name: "zsec.local"
-domain: "zsec.local"       # alias used in credentials file output — keep in sync with domain_name
+domain: "zsec.local"       # alias used in credentials file output - keep in sync with domain_name
 domain_netbios: "ZSEC"
 
 organizational_units: []

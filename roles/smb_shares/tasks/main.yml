@@ -107,12 +107,12 @@
 
       Shares Created:
         - IT       (IT-Admins + Administrators full)
-        - HR       (Domain Users read — intentional misconfiguration)
-        - Finance  (Domain Users read — intentional misconfiguration)
+        - HR       (Domain Users read - intentional misconfiguration)
+        - Finance  (Domain Users read - intentional misconfiguration)
         - Security (IT-Admins + Administrators full)
         - Backups  (Backup-Operators change, Administrators full)
         - Deploy   (Administrators only)
-        - Honeypot (Everyone read — filesystem auditing enabled)
+        - Honeypot (Everyone read - filesystem auditing enabled)
 
       Planted Credentials:
         - C:\Shares\IT\admin-notes.txt          (DA password hint + svc_deploy ref)
@@ -128,32 +128,32 @@
     dest: "C:\\Tools\\smb-shares-info.txt"
     content: |
       ═══════════════════════════════════════════════════════════════
-      ZSEC SMB Shares Configuration — OPERATOR USE ONLY
+      ZSEC SMB Shares Configuration - OPERATOR USE ONLY
       Host: {{ inventory_hostname }}
       ═══════════════════════════════════════════════════════════════
 
       SHARES
       ──────
-      \\{{ inventory_hostname }}\IT        → C:\Shares\IT       (IT-Admins + Administrators)
-      \\{{ inventory_hostname }}\HR        → C:\Shares\HR       (Domain Users read - misconfigured)
-      \\{{ inventory_hostname }}\Finance   → C:\Shares\Finance  (Domain Users read - misconfigured)
-      \\{{ inventory_hostname }}\Security  → C:\Shares\Security (IT-Admins + Administrators)
-      \\{{ inventory_hostname }}\Backups   → C:\Shares\Backups  (Backup-Operators change, Admins full)
-      \\{{ inventory_hostname }}\Deploy    → C:\Shares\Deploy   (Administrators only)
-      \\{{ inventory_hostname }}\Honeypot  → C:\Shares\Honeypot (Everyone read - audited)
-      \\{{ inventory_hostname }}\ADMIN$    → C:\Windows         (default admin share)
-      \\{{ inventory_hostname }}\C$        → C:\                (default admin share)
+      \\{{ inventory_hostname }}\IT        -> C:\Shares\IT       (IT-Admins + Administrators)
+      \\{{ inventory_hostname }}\HR        -> C:\Shares\HR       (Domain Users read - misconfigured)
+      \\{{ inventory_hostname }}\Finance   -> C:\Shares\Finance  (Domain Users read - misconfigured)
+      \\{{ inventory_hostname }}\Security  -> C:\Shares\Security (IT-Admins + Administrators)
+      \\{{ inventory_hostname }}\Backups   -> C:\Shares\Backups  (Backup-Operators change, Admins full)
+      \\{{ inventory_hostname }}\Deploy    -> C:\Shares\Deploy   (Administrators only)
+      \\{{ inventory_hostname }}\Honeypot  -> C:\Shares\Honeypot (Everyone read - audited)
+      \\{{ inventory_hostname }}\ADMIN$    -> C:\Windows         (default admin share)
+      \\{{ inventory_hostname }}\C$        -> C:\                (default admin share)
 
       PLANTED CREDENTIALS
       ───────────────────
-      C:\Shares\IT\admin-notes.txt               → Domain admin password hint (svc_deploy, old DA pass)
-      C:\Shares\IT\scripts\deploy.ps1            → svc_deploy / D3pl0y@utomation! in plaintext
-      C:\Shares\IT\configs\server-config.xml     → svc_sql (SqlService2026!) + svc_backup (SvcBackup2026!)
-      C:\Shares\IT\pki-docs\certificate-templates.txt → ADCS template reference (ESC1-ESC15)
-      C:\Shares\HR\employees.xlsx                → Full employee directory (username + dept)
-      C:\Shares\Finance\budget-2026.xlsx         → Financial data
-      C:\Shares\Backups\backup-job.ps1           → svc_backup / SvcBackup2026! in plaintext
-      C:\Shares\Deploy\deploy-config.xml         → svc_deploy / D3pl0y@utomation! in XML
+      C:\Shares\IT\admin-notes.txt               -> Domain admin password hint (svc_deploy, old DA pass)
+      C:\Shares\IT\scripts\deploy.ps1            -> svc_deploy / D3pl0y@utomation! in plaintext
+      C:\Shares\IT\configs\server-config.xml     -> svc_sql (SqlService2026!) + svc_backup (SvcBackup2026!)
+      C:\Shares\IT\pki-docs\certificate-templates.txt -> ADCS template reference (ESC1-ESC15)
+      C:\Shares\HR\employees.xlsx                -> Full employee directory (username + dept)
+      C:\Shares\Finance\budget-2026.xlsx         -> Financial data
+      C:\Shares\Backups\backup-job.ps1           -> svc_backup / SvcBackup2026! in plaintext
+      C:\Shares\Deploy\deploy-config.xml         -> svc_deploy / D3pl0y@utomation! in XML
 
       ATTACK SCENARIOS
       ────────────────
@@ -161,14 +161,14 @@
       2. Read IT share:     smbclient //{{ ansible_host }}/IT -U 'ZSEC/jsmith%Summer2026!'
       3. Find creds:        get admin-notes.txt, scripts/deploy.ps1, configs/server-config.xml
       4. HR/Finance:        accessible to all Domain Users (intentional misconfiguration)
-      5. NTLM relay:        net use \\{{ ansible_host }}\Honeypot (audited — triggers alert)
+      5. NTLM relay:        net use \\{{ ansible_host }}\Honeypot (audited - triggers alert)
       ═══════════════════════════════════════════════════════════════
 
 - name: Show SMB shares deployment status
   ansible.builtin.debug:
     msg:
       - "════════════════════════════════════════════"
-      - "  smb_shares — Deployment Complete"
+      - "  smb_shares - Deployment Complete"
       - "════════════════════════════════════════════"
       - "  Host     : {{ inventory_hostname }}"
       - "  Shares   : IT, HR, Finance, Security, Backups, Deploy, Honeypot"

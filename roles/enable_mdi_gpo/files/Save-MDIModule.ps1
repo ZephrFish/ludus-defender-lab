@@ -16,7 +16,7 @@
     cd roles/enable_mdi_gpo/files/
     .\Save-MDIModule.ps1
 
-    # Then deploy as normal — no internet needed on the DC:
+    # Then deploy as normal - no internet needed on the DC:
     ludus range deploy
 
 .NOTES

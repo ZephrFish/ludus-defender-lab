@@ -13,4 +13,5 @@ mdi_gpo_prefix: "MDI"
 # Run files/Save-MDIModule.ps1 on an internet-connected machine to pre-stage
 # the DefenderForIdentity module. The role detects files/DefenderForIdentity/
 # automatically and uses it instead of PSGallery.
-# Current PSGallery version: DefenderForIdentity 1.0.0.4
+# Bundled offline copy: DefenderForIdentity 1.0.0.4
+# Re-run files/Save-MDIModule.ps1 to pull the latest version (1.0.0.5+).

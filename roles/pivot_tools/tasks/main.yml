@@ -74,7 +74,7 @@
 
     - name: Fail with clear message
       ansible.builtin.fail:
-        msg: "Chisel download FAILED on {{ inventory_hostname }} — verify chisel_version variable"
+        msg: "Chisel download FAILED on {{ inventory_hostname }} - verify chisel_version variable"
 
 - name: Configure proxychains
   ansible.builtin.copy:
@@ -350,7 +350,7 @@
   ansible.builtin.debug:
     msg:
       - "════════════════════════════════════════════"
-      - "  pivot_tools — Deployment Complete"
+      - "  pivot_tools - Deployment Complete"
       - "════════════════════════════════════════════"
       - "  Chisel    : /usr/local/bin/chisel {{ chisel_version_check.stdout | default('installed') }}"
       - "  SOCKS5    : port {{ socks_port | default('1080') }}"

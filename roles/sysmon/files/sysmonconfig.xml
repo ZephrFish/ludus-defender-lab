@@ -53,7 +53,7 @@
 
     <!-- ================================================================
          EVENT 2: File Create Time Changed (timestomping)
-         Log all — timestomping is a common attacker anti-forensics TTP.
+         Log all - timestomping is a common attacker anti-forensics TTP.
          ================================================================ -->
     <RuleGroup name="" groupRelation="or">
       <FileCreateTime onmatch="exclude">
@@ -67,25 +67,25 @@
          EVENT 3: Network Connection
          Log all process network connections except high-frequency benign
          noise from svchost (Windows Update, WMI, NTP, DNS resolver).
-         Port-based exclusions are NOT used here — excluding all 443/80
+         Port-based exclusions are NOT used here - excluding all 443/80
          would blind the config to HTTPS C2, exfil, and lateral movement.
          Event 22 (DnsQuery) provides DNS visibility without needing port
          53 exclusions here.
          ================================================================ -->
     <RuleGroup name="" groupRelation="or">
       <NetworkConnect onmatch="exclude">
-        <!-- svchost handles Windows Update, WMI, NTP, DNS — too noisy to log -->
+        <!-- svchost handles Windows Update, WMI, NTP, DNS - too noisy to log -->
         <Image condition="is">C:\Windows\System32\svchost.exe</Image>
         <!-- NTP from other system processes -->
         <DestinationPort condition="is">123</DestinationPort>
       </NetworkConnect>
     </RuleGroup>
 
-    <!-- EVENT 4: Sysmon Service State Changed — always logged by Sysmon,
+    <!-- EVENT 4: Sysmon Service State Changed - always logged by Sysmon,
          not configurable via XML (ServiceStateChange is not in the schema) -->
 
     <!-- ================================================================
-         EVENT 5: Process Terminated — exclude all (too noisy for lab)
+         EVENT 5: Process Terminated - exclude all (too noisy for lab)
          ================================================================ -->
     <RuleGroup name="" groupRelation="or">
       <ProcessTerminate onmatch="exclude">
@@ -132,7 +132,7 @@
 
     <!-- ================================================================
          EVENT 8: CreateRemoteThread
-         Log all — nearly always malicious or debugging.
+         Log all - nearly always malicious or debugging.
          ================================================================ -->
     <RuleGroup name="" groupRelation="or">
       <CreateRemoteThread onmatch="exclude">
@@ -142,7 +142,7 @@
     </RuleGroup>
 
     <!-- ================================================================
-         EVENT 9: RawAccessRead — log all disk reads
+         EVENT 9: RawAccessRead - log all disk reads
          ================================================================ -->
     <RuleGroup name="" groupRelation="or">
       <RawAccessRead onmatch="exclude">
@@ -156,7 +156,7 @@
          ================================================================ -->
     <RuleGroup name="" groupRelation="or">
       <ProcessAccess onmatch="include">
-        <!-- LSASS — most credential dumping touches this -->
+        <!-- LSASS - most credential dumping touches this -->
         <TargetImage condition="is">C:\Windows\system32\lsass.exe</TargetImage>
         <!-- SAM / SECURITY registry hives via regsvr32 -->
         <TargetImage condition="is">C:\Windows\system32\regsvr32.exe</TargetImage>
@@ -297,7 +297,7 @@
 
     <!-- ================================================================
          EVENT 22: DNS Queries
-         Log all — useful for C2 beaconing and lateral movement detection.
+         Log all - useful for C2 beaconing and lateral movement detection.
          Internal zsec.local queries are intentionally NOT excluded so that
          DNS-based recon (BloodHound, nslookup enumeration, reverse lookups)
          is visible in Sysmon. Exclude only high-frequency Windows noise
@@ -330,7 +330,7 @@
 
     <!-- ================================================================
          EVENT 25: ProcessTampering
-         Detects process hollowing, doppelganging, and herpaderping —
+         Detects process hollowing, doppelganging, and herpaderping -
          techniques that replace legitimate process memory with malicious
          code. Log all (very low noise, high fidelity).
          ================================================================ -->

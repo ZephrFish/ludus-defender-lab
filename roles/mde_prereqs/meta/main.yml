@@ -4,7 +4,7 @@
 galaxy_info:
   role_name: mde_prereqs
   author: "@ZephrFish"
-  description: Pre-stage MDE/MDI prerequisites on Windows hosts — PowerShell logging,
+  description: Pre-stage MDE/MDI prerequisites on Windows hosts - PowerShell logging,
     Defender cloud protection, Network Protection, TLS 1.2, event log sizing,
     process command line auditing, and optional High Performance power plan.
   version: "1.0.0"
