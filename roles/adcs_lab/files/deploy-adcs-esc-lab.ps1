@@ -59,6 +59,15 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Failures are collected here and the script throws at the end if any occurred,
+# so Ansible reports the role as failed instead of silently succeeding.
+$script:Failures = New-Object System.Collections.Generic.List[string]
+function Add-Failure {
+    param([string]$Message)
+    Write-Host "    [-] $Message" -ForegroundColor Red
+    $script:Failures.Add($Message)
+}
+
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host "  ADCS ESC Attack Lab Configuration" -ForegroundColor Cyan
@@ -74,8 +83,7 @@ try {
     Write-Host "[+] CA Name: $caName" -ForegroundColor Green
 } catch {
     Write-Host "[-] Error: This script must run on an ADCS server" -ForegroundColor Red
-    Write-Host "    $_" -ForegroundColor Red
-    exit 1
+    throw "This script must run on an ADCS server: $_"
 }
 
 $Domain = (Get-ADDomain).DNSRoot
@@ -201,7 +209,7 @@ function New-VulnerableTemplate {
         }
 
     } catch {
-        Write-Host "    [-] Failed to create template: $_" -ForegroundColor Red
+        Add-Failure "Failed to create template $TemplateName : $_"
     }
 }
 
@@ -216,7 +224,7 @@ function Set-TemplatePermissions {
 
     try {
         $template = [ADSI]"LDAP://$templateDN"
-        $acl = $template.ObjectSecurity
+        $acl = $template.psbase.ObjectSecurity
 
         foreach ($principal in $Principals) {
             # Enroll permission (ExtendedRight)
@@ -233,13 +241,14 @@ function Set-TemplatePermissions {
                 $acl.AddAccessRule($ace)
                 Write-Host "    [+] Added Enroll permission for $principal" -ForegroundColor Green
             } catch {
-                Write-Host "    [!] Could not add permission for $principal" -ForegroundColor Yellow
+                Add-Failure "Could not add Enroll permission for $principal on $TemplateName : $_"
             }
         }
 
-        $template.CommitChanges()
+        $template.psbase.ObjectSecurity = $acl
+        $template.psbase.CommitChanges()
     } catch {
-        Write-Host "    [-] Failed to set permissions: $_" -ForegroundColor Red
+        Add-Failure "Failed to set Enroll permissions on $TemplateName : $_"
     }
 }
 
@@ -255,7 +264,7 @@ function Set-TemplateWritePermissions {
 
     try {
         $template = [ADSI]"LDAP://$templateDN"
-        $acl = $template.ObjectSecurity
+        $acl = $template.psbase.ObjectSecurity
 
         $sid = (New-Object System.Security.Principal.NTAccount($Principal)).Translate([System.Security.Principal.SecurityIdentifier])
 
@@ -273,10 +282,11 @@ function Set-TemplateWritePermissions {
             [System.Security.AccessControl.AccessControlType]::Allow
         )
         $acl.AddAccessRule($ace)
-        $template.CommitChanges()
+        $template.psbase.ObjectSecurity = $acl
+        $template.psbase.CommitChanges()
         Write-Host "    [+] Added $Permission for $Principal (VULNERABLE!)" -ForegroundColor Green
     } catch {
-        Write-Host "    [-] Failed to set $Permission : $_" -ForegroundColor Red
+        Add-Failure "Failed to set $Permission : $_"
     }
 }
 
@@ -286,41 +296,21 @@ function Publish-Template {
     Write-Host "[*] Publishing template: $TemplateName" -ForegroundColor Cyan
 
     try {
+        # Skip if the CA already publishes this template
+        $published = (& certutil -CATemplates 2>$null) -join "`n"
+        if ($published -match "(?m)^$([regex]::Escape($TemplateName)):") {
+            Write-Host "    [=] Template already published" -ForegroundColor DarkGray
+            return
+        }
         # Add template to CA's published templates
-        certutil -SetCATemplates +$TemplateName 2>&1 | Out-Null
+        $out = & certutil -SetCATemplates "+$TemplateName" 2>$null
+        if ($LASTEXITCODE -ne 0) { throw "certutil -SetCATemplates exited $LASTEXITCODE : $out" }
         Write-Host "    [+] Template published to CA" -ForegroundColor Green
     } catch {
-        Write-Host "    [-] Failed to publish: $_" -ForegroundColor Red
+        Add-Failure "Failed to publish $TemplateName : $_"
     }
 }
 
-function Set-CAPermissions {
-    param(
-        [string]$Principal,
-        [string]$Permission
-    )
-
-    Write-Host "[*] Setting CA permission: $Permission for $Principal" -ForegroundColor Cyan
-
-    try {
-        $caConfig = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\CertSvc\Configuration"
-        $caName = $caConfig.Active
-
-        switch ($Permission) {
-            "ManageCA" {
-                # Grant ManageCA permission
-                certutil -config ".\$caName" -setreg ca\Security "+$Principal ManageCA" 2>&1 | Out-Null
-            }
-            "ManageCertificates" {
-                # Grant ManageCertificates permission
-                certutil -config ".\$caName" -setreg ca\Security "+$Principal ManageCertificates" 2>&1 | Out-Null
-            }
-        }
-        Write-Host "    [+] $Permission granted to $Principal" -ForegroundColor Green
-    } catch {
-        Write-Host "    [-] Failed to set CA permission: $_" -ForegroundColor Red
-    }
-}
 
 # =============================================================================
 # ESC1 - Misconfigured Certificate Template (SAN Abuse)
@@ -438,10 +428,10 @@ Write-Host "[*] Adding vulnerable ACLs to PKI containers..." -ForegroundColor Cy
 
 $ConfigContext = ([ADSI]"LDAP://RootDSE").configurationNamingContext
 
-# Grant Domain Users write access to Certificate Templates container
+# Grant svc_backup GenericWrite on the Certificate Templates container
 try {
     $templatesContainer = [ADSI]"LDAP://CN=Certificate Templates,CN=Public Key Services,CN=Services,$ConfigContext"
-    $acl = $templatesContainer.ObjectSecurity
+    $acl = $templatesContainer.psbase.ObjectSecurity
 
     $sid = (New-Object System.Security.Principal.NTAccount("$DomainNetBIOS\svc_backup")).Translate([System.Security.Principal.SecurityIdentifier])
     $ace = New-Object System.DirectoryServices.ActiveDirectoryAccessRule(
@@ -450,10 +440,11 @@ try {
         [System.Security.AccessControl.AccessControlType]::Allow
     )
     $acl.AddAccessRule($ace)
-    $templatesContainer.CommitChanges()
+    $templatesContainer.psbase.ObjectSecurity = $acl
+    $templatesContainer.psbase.CommitChanges()
     Write-Host "    [+] Added GenericWrite for svc_backup on Certificate Templates container" -ForegroundColor Green
 } catch {
-    Write-Host "    [-] Failed to set container ACLs: $_" -ForegroundColor Red
+    Add-Failure "Failed to set Certificate Templates container ACL (ESC5): $_"
 }
 } # end ESC5
 
@@ -468,11 +459,12 @@ Write-Host "=== ESC6: Enable EDITF_ATTRIBUTESUBJECTALTNAME2 ===" -ForegroundColo
 
 Write-Host "[*] Enabling SAN editing on CA..." -ForegroundColor Cyan
 try {
-    certutil -setreg policy\EditFlags +EDITF_ATTRIBUTESUBJECTALTNAME2 2>&1 | Out-Null
+    $out = & certutil -setreg policy\EditFlags +EDITF_ATTRIBUTESUBJECTALTNAME2 2>$null
+    if ($LASTEXITCODE -ne 0) { throw "certutil exited $LASTEXITCODE : $out" }
     Write-Host "    [+] EDITF_ATTRIBUTESUBJECTALTNAME2 enabled" -ForegroundColor Green
     Write-Host "    [!] This allows ANY template to specify a SAN!" -ForegroundColor Yellow
 } catch {
-    Write-Host "    [-] Failed to enable flag: $_" -ForegroundColor Red
+    Add-Failure "Failed to enable EDITF_ATTRIBUTESUBJECTALTNAME2 (ESC6): $_"
 }
 } # end ESC6
 
@@ -485,26 +477,37 @@ if ($SkipESC7) {
 } else {
 Write-Host "=== ESC7: Vulnerable CA ACLs ===" -ForegroundColor Yellow
 
-# Create a low-privilege user for ESC7 testing
+# Grant svc_backup ManageCA (0x1) and ManageCertificates (0x2) on the CA.
+# The CA security descriptor is stored as binary in the CA's registry key and
+# is read by certsvc on start (restarted at the end of this script).
 try {
-    $esc7User = Get-ADUser -Identity "svc_backup" -ErrorAction SilentlyContinue
-    if ($esc7User) {
-        Write-Host "[*] Setting ManageCA permission for svc_backup..." -ForegroundColor Cyan
+    $esc7Sid = (New-Object System.Security.Principal.NTAccount("$DomainNetBIOS\svc_backup")).Translate([System.Security.Principal.SecurityIdentifier])
+    Write-Host "[*] Setting ManageCA and ManageCertificates for svc_backup..." -ForegroundColor Cyan
 
-        # Grant ManageCA and ManageCertificates to svc_backup
-        $caConfig = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\CertSvc\Configuration"
-        $caName = $caConfig.Active
+    $caRegPath = "HKLM:\SYSTEM\CurrentControlSet\Services\CertSvc\Configuration\$caName"
+    $sdBytes = (Get-ItemProperty -Path $caRegPath -Name Security).Security
+    $caSd = New-Object System.Security.AccessControl.RawSecurityDescriptor -ArgumentList (,$sdBytes), 0
 
-        # Use ICACLS-style for CA permissions via certutil
-        $principal = "$DomainNetBIOS\svc_backup"
-
-        # Grant permissions using registry (more reliable)
-        $caSecurityPath = "HKLM:\SYSTEM\CurrentControlSet\Services\CertSvc\Configuration\$caName"
-        Write-Host "    [+] ManageCA permission configured for svc_backup" -ForegroundColor Green
+    $caMask = 0x3  # CA_ACCESS_ADMIN | CA_ACCESS_OFFICER
+    $hasAce = $caSd.DiscretionaryAcl | Where-Object {
+        $_.SecurityIdentifier -eq $esc7Sid -and $_.AceQualifier -eq 'AccessAllowed' -and (($_.AccessMask -band $caMask) -eq $caMask)
+    }
+    if ($hasAce) {
+        Write-Host "    [=] svc_backup already has ManageCA/ManageCertificates" -ForegroundColor DarkGray
+    } else {
+        $caAce = New-Object System.Security.AccessControl.CommonAce(
+            [System.Security.AccessControl.AceFlags]::None,
+            [System.Security.AccessControl.AceQualifier]::AccessAllowed,
+            $caMask, $esc7Sid, $false, $null)
+        $caSd.DiscretionaryAcl.InsertAce($caSd.DiscretionaryAcl.Count, $caAce)
+        $newSd = New-Object byte[] $caSd.BinaryLength
+        $caSd.GetBinaryForm($newSd, 0)
+        Set-ItemProperty -Path $caRegPath -Name Security -Value $newSd -Type Binary
+        Write-Host "    [+] ManageCA and ManageCertificates granted to svc_backup" -ForegroundColor Green
         Write-Host "    [!] svc_backup can now modify CA configuration!" -ForegroundColor Yellow
     }
 } catch {
-    Write-Host "    [!] svc_backup user not found, skipping ESC7 user config" -ForegroundColor Yellow
+    Add-Failure "Failed to configure ESC7 CA permissions: $_"
 }
 } # end ESC7
 
@@ -525,13 +528,13 @@ if ($webEnroll -and $webEnroll.Installed) {
 } else {
     Write-Host "[*] Installing Web Enrollment role..." -ForegroundColor Cyan
     try {
-        Install-WindowsFeature ADCS-Web-Enrollment -IncludeManagementTools
+        Install-WindowsFeature ADCS-Web-Enrollment -IncludeManagementTools | Out-Null
         Write-Host "    [+] Web Enrollment installed" -ForegroundColor Green
 
-        Install-AdcsWebEnrollment -Force -ErrorAction SilentlyContinue
+        Install-AdcsWebEnrollment -Force | Out-Null
         Write-Host "    [+] Web Enrollment configured" -ForegroundColor Green
     } catch {
-        Write-Host "    [!] Could not install Web Enrollment: $_" -ForegroundColor Yellow
+        Add-Failure "Could not install Web Enrollment (ESC8): $_"
     }
 }
 
@@ -580,7 +583,7 @@ if (-not $SkipDCConfig) {
             Write-Host '        Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Kdc" -Name "StrongCertificateBindingEnforcement" -Value 0 -Type DWord' -ForegroundColor Cyan
         }
     } catch {
-        Write-Host "    [-] Failed to configure DC: $_" -ForegroundColor Red
+        Add-Failure "Failed to configure DC: $_"
     }
 } else {
     Write-Host "    [=] Skipping DC configuration (use -SkipDCConfig:$false to enable)" -ForegroundColor DarkGray
@@ -612,7 +615,7 @@ if (-not $SkipDCConfig) {
             Write-Host '        Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\Schannel" -Name "CertificateMappingMethods" -Value 0x1F -Type DWord' -ForegroundColor Cyan
         }
     } catch {
-        Write-Host "    [-] Failed to configure DC: $_" -ForegroundColor Red
+        Add-Failure "Failed to configure DC: $_"
     }
 } else {
     Write-Host "    [=] Skipping DC configuration" -ForegroundColor DarkGray
@@ -630,11 +633,12 @@ Write-Host "=== ESC11: Disable RPC Encryption Requirement ===" -ForegroundColor 
 Write-Host "[*] Disabling IF_ENFORCEENCRYPTICERTREQUEST..." -ForegroundColor Cyan
 try {
     # Remove the encryption requirement flag
-    certutil -setreg CA\InterfaceFlags -IF_ENFORCEENCRYPTICERTREQUEST 2>&1 | Out-Null
+    $out = & certutil -setreg CA\InterfaceFlags -IF_ENFORCEENCRYPTICERTREQUEST 2>$null
+    if ($LASTEXITCODE -ne 0) { throw "certutil exited $LASTEXITCODE : $out" }
     Write-Host "    [+] IF_ENFORCEENCRYPTICERTREQUEST disabled" -ForegroundColor Green
     Write-Host "    [!] RPC requests can now be relayed without encryption!" -ForegroundColor Yellow
 } catch {
-    Write-Host "    [-] Failed to disable encryption: $_" -ForegroundColor Red
+    Add-Failure "Failed to disable IF_ENFORCEENCRYPTICERTREQUEST (ESC11): $_"
 }
 } # end ESC11
 
@@ -675,7 +679,8 @@ try {
         Write-Host "    [+] Linked to: Domain Admins" -ForegroundColor Green
         Write-Host "    [!] Certificates with this policy grant DA access!" -ForegroundColor Yellow
     } else {
-        Write-Host "    [=] Issuance policy already exists" -ForegroundColor DarkGray
+        $policyOID = (Get-ADObject $existingPolicy -Properties 'msPKI-Cert-Template-OID').'msPKI-Cert-Template-OID'
+        Write-Host "    [=] Issuance policy already exists ($policyOID)" -ForegroundColor DarkGray
     }
 
     # Create template that uses this issuance policy
@@ -699,7 +704,7 @@ try {
     Publish-Template -TemplateName "ESC13-IssuancePolicy"
 
 } catch {
-    Write-Host "    [-] Failed to create issuance policy: $_" -ForegroundColor Red
+    Add-Failure "Failed to create issuance policy: $_"
 }
 } # end ESC13
 
@@ -721,14 +726,19 @@ try {
         # Add a weak X509 mapping that can be exploited
         # Format: X509:<S>CN=jsmith (subject only - weak mapping)
         $weakMapping = "X509:<S>CN=jsmith,CN=Users,$DomainDN"
-        Set-ADUser -Identity $testUser -Add @{altSecurityIdentities = $weakMapping}
-        Write-Host "    [+] Added weak altSecurityIdentities to jsmith" -ForegroundColor Green
-        Write-Host "    [!] Subject-only mapping is exploitable!" -ForegroundColor Yellow
+        $current = (Get-ADUser -Identity $testUser -Properties altSecurityIdentities).altSecurityIdentities
+        if ($current -contains $weakMapping) {
+            Write-Host "    [=] Weak altSecurityIdentities already present on jsmith" -ForegroundColor DarkGray
+        } else {
+            Set-ADUser -Identity $testUser -Add @{altSecurityIdentities = $weakMapping}
+            Write-Host "    [+] Added weak altSecurityIdentities to jsmith" -ForegroundColor Green
+            Write-Host "    [!] Subject-only mapping is exploitable!" -ForegroundColor Yellow
+        }
     } else {
         Write-Host "    [!] jsmith user not found, skipping ESC14 config" -ForegroundColor Yellow
     }
 } catch {
-    Write-Host "    [-] Failed to configure altSecurityIdentities: $_" -ForegroundColor Red
+    Add-Failure "Failed to configure altSecurityIdentities: $_"
 }
 } # end ESC14
 
@@ -764,12 +774,19 @@ try {
     Start-Sleep -Seconds 5
     Write-Host "    [+] CA service restarted" -ForegroundColor Green
 } catch {
-    Write-Host "    [-] Failed to restart CA: $_" -ForegroundColor Red
+    Add-Failure "Failed to restart CA: $_"
 }
 
 # =============================================================================
 # Summary
 # =============================================================================
+
+if ($script:Failures.Count -gt 0) {
+    Write-Host ""
+    Write-Host "[-] $($script:Failures.Count) step(s) failed:" -ForegroundColor Red
+    $script:Failures | ForEach-Object { Write-Host "    - $_" -ForegroundColor Red }
+    throw "ADCS ESC lab configuration finished with $($script:Failures.Count) failure(s): $($script:Failures -join '; ')"
+}
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Green

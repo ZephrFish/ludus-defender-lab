@@ -141,8 +141,10 @@ for role_dir in "$ROLES_DIR"/*/; do
         if [ -n "$FORCE_FLAG" ] && [ -d "$LUDUS_ROLES_DIR/$role_name" ]; then
             rm -rf "$LUDUS_ROLES_DIR/$role_name"
         fi
-        install_output=$(ludus ansible role add -d "$role_dir" 2>&1)
-        install_exit=$?
+        # "|| install_exit=$?" stops set -e from aborting the whole script
+        # on the first failed role, so the remaining roles still install.
+        install_exit=0
+        install_output=$(ludus ansible role add -d "$role_dir" 2>&1) || install_exit=$?
         if echo "$install_output" | grep -q "NOT installed successfully\|error\|ERROR" 2>/dev/null || [ $install_exit -ne 0 ]; then
             echo "    WARNING: Failed to install $role_name"
             echo "    $install_output" | grep -i "error\|NOT installed" | head -3
@@ -167,7 +169,7 @@ if [ "$FAILED" -gt 0 ]; then
     echo ""
 fi
 echo "Verify roles are registered:"
-echo "  ludus ansible role list | grep -E 'ad_population|adcs_lab|mde_prereqs|pivot_tools|preflight|rsat|smb_shares|sysmon|wef'  # should show $ROLE_COUNT+ entries"
+echo "  ludus ansible role list | grep -E 'ad_population|adcs_lab|enable_asr|enable_mdi_gpo|mde_prereqs|pivot_tools|rsat|smb_shares|sysmon|wef'  # should show $ROLE_COUNT+ entries"
 echo ""
 echo "Next steps (run from the project root, not from roles/):"
 echo "  1. Set your config:  ludus range config set -f zsec-mde-mdi-lab.yml"

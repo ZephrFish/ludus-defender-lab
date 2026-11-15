@@ -11,6 +11,3 @@ wef_collector_server: DC01.zsec.local
 
 # Force reconfiguration
 wef_force_reconfigure: false
-
-# Create GPO for automatic enrollment (collector only)
-wef_create_gpo: false

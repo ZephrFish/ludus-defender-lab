@@ -161,6 +161,7 @@
       }
   when:
     - adcs_configure_dc_settings | default(false)
+    - adcs_enable_esc14 | default(true)
   register: esc14_result
   changed_when: "'Added weak' in (esc14_result.output | join(' '))"
 

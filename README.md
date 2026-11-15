@@ -116,6 +116,7 @@ Get-Service Sysmon64
 # WEF subscriptions (collector)
 wecutil es
 wecutil gs ZSec-MDI-Events
+wecutil gr ZSec-MDI-Events   # WKS01 should be listed as an active source
 
 # Audit policy
 auditpol /get /category:* | Select-String "Success and Failure"
@@ -134,7 +135,8 @@ wevtutil gl "Microsoft-Windows-Sysmon/Operational" | Select-String maxSize
 Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging'
 
 # NTLM auditing (DC only)
-Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0' | Select AuditReceivingNTLMTraffic, AuditNTLMInDomain
+Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0' | Select RestrictSendingNTLMTraffic, AuditReceivingNTLMTraffic
+Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\Netlogon\Parameters' | Select AuditNTLMInDomain
 
 # MDI v3 sensor status (after onboarding)
 Get-Service SenseIdentity, Sense | Format-Table Name, Status, StartType

@@ -62,9 +62,39 @@ if ($Mode -eq 'Collector') {
         if ($currentTrusted -notlike "*$CollectorServer*") {
             winrm set winrm/config/client "@{TrustedHosts=`"$CollectorServer`"}" 2>&1 | Out-Null
         }
+
+        # Point the forwarder at the collector. The subscription is source-initiated,
+        # so without this policy value the forwarder never contacts the collector.
+        $smPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\EventLog\EventForwarding\SubscriptionManager'
+        $smValue = "Server=http://${CollectorServer}:5985/wsman/SubscriptionManager/WEC,Refresh=60"
+        if (-not (Test-Path $smPath)) { New-Item -Path $smPath -Force | Out-Null }
+        Set-ItemProperty -Path $smPath -Name '1' -Value $smValue -Type String
+        Write-Host "[+] SubscriptionManager set: $smValue" -ForegroundColor Green
+
+        # The forwarding service runs as NETWORK SERVICE, which cannot read the
+        # Security log unless it is a member of Event Log Readers (S-1-5-32-573).
+        $elr = Get-LocalGroup -SID 'S-1-5-32-573'
+        $ns  = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-20')
+        $isMember = Get-LocalGroupMember -Group $elr -ErrorAction SilentlyContinue |
+                    Where-Object { $_.SID -eq $ns }
+        if (-not $isMember) {
+            Add-LocalGroupMember -Group $elr -Member $ns
+            Write-Host "[+] Added NETWORK SERVICE to $($elr.Name)" -ForegroundColor Green
+        }
+
+        # WinRM only reads the SubscriptionManager policy when it starts. Restarting it
+        # inline would drop the Ansible connection mid-task, so hand the restart to a
+        # one-off SYSTEM scheduled task that runs after this script has returned.
+        $taskName = 'ZSec-WEF-RestartWinRM'
+        Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
+        $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -Command `"Start-Sleep -Seconds 10; Restart-Service WinRM -Force; Unregister-ScheduledTask -TaskName $taskName -Confirm:`$false`""
+        Register-ScheduledTask -TaskName $taskName -Action $action -User 'SYSTEM' -RunLevel Highest -Force | Out-Null
+        Start-ScheduledTask -TaskName $taskName
+        Write-Host "[*] WinRM restart scheduled to apply forwarding policy" -ForegroundColor Cyan
+
         Write-Host "[+] WEF Forwarder configured (collector: $CollectorServer)" -ForegroundColor Green
     } else {
-        Write-Host "[+] WEF Forwarder configured (no collector specified)" -ForegroundColor Green
+        throw "Forwarder mode requires -CollectorServer"
     }
 }
 

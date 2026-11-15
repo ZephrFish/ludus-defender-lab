@@ -634,20 +634,21 @@
 #   AuditReceivingNTLMTraffic  = 2  -> Enable auditing for all accounts (incoming)
 - name: Configure NTLM auditing registry keys (Event 8004)
   ansible.windows.win_regedit:
-    path: HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0
+    path: "{{ item.path }}"
     name: "{{ item.name }}"
     data: "{{ item.data }}"
     type: dword
   loop:
-    - { name: RestrictSendingNTLMTraffic, data: 1 }
-    - { name: AuditNTLMInDomain,          data: 7 }
-    - { name: AuditReceivingNTLMTraffic,  data: 2 }
+    - { path: 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0',             name: RestrictSendingNTLMTraffic, data: 1 }
+    - { path: 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0',             name: AuditReceivingNTLMTraffic,  data: 2 }
+    - { path: 'HKLM:\SYSTEM\CurrentControlSet\Services\Netlogon\Parameters',  name: AuditNTLMInDomain,          data: 7 }
   when: mde_enable_ntlm_auditing | default(false)
 
 # ── ADCS CA Auditing (CA server only) ────────────────────────────────────────
 # AuditFilter 127 enables all CA audit categories:
-#   1=Start/Stop, 2=Backup/Restore, 4=Certificate Issued, 8=Cert Revoked,
-#   16=CRL Published, 32=Template Changed, 64=CA Config Changed
+#   1=Start/Stop AD CS, 2=Backup/Restore CA database, 4=Issue/manage requests,
+#   8=Revoke certs/publish CRLs, 16=Change CA security, 32=Key archival/recovery,
+#   64=Change CA configuration
 # Also sets auditpol Certification Services subcategory for Event 4870/4871.
 - name: Enable ADCS Certificate Authority auditing (AuditFilter 127)
   ansible.windows.win_powershell:

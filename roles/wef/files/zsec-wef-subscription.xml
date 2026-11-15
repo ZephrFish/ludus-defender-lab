@@ -132,8 +132,8 @@
     AllowedSourceDomainComputers SDDL:
       O:NS          - owner: Network Service
       G:NS          - group: Network Service
-      D:(A;;GA;;;DC) - allow Domain Controllers (DC SID)
-        (A;;GA;;;DD) - allow Domain Computers (DD SID)
+      D:(A;;GA;;;DC) - allow Domain Computers (SDDL alias DC)
+        (A;;GA;;;DD) - allow Domain Controllers (SDDL alias DD)
     Both groups are automatically granted GA (Generic All) so any domain-joined
     Windows host can forward events to this collector.
   -->

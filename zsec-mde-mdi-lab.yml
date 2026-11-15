@@ -314,7 +314,6 @@ ludus:
 
       # ── WEF - Collector mode on DC ────────────────────────────────────────────
       wef_mode: collector
-      wef_create_gpo: true
       wef_force_reconfigure: false
 
       # ── Sysmon ────────────────────────────────────────────────────────────────

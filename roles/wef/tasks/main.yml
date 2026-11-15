@@ -39,10 +39,17 @@
   when: wef_mode == 'collector'
 
 - name: Check if WEF already configured
+  # Collector: look for the subscription. Forwarder: look for the SubscriptionManager
+  # policy pointing at the collector (wecutil es is meaningless on a forwarder and
+  # prints an error when Wecsvc is stopped, which used to skip forwarder setup).
   ansible.windows.win_powershell:
     script: |
-      $subs = wecutil es 2>&1
-      $subs
+      if ('{{ wef_mode }}' -eq 'collector') {
+        wecutil es 2>&1
+      } else {
+        $v = (Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\EventLog\EventForwarding\SubscriptionManager' -ErrorAction SilentlyContinue).'1'
+        if ($v -like '*{{ wef_collector_server | default('') }}*') { "SUBMGR_OK:$v" }
+      }
   register: wef_configured
   failed_when: false
   changed_when: false
@@ -66,9 +73,15 @@
         script: |
           Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
           & C:\Tools\WEF\configure-wef.ps1 -Mode Forwarder -CollectorServer "{{ wef_collector_server }}" -Force
-      when: wef_mode == 'forwarder' and (wef_configured.output | default([]) | join('') | trim == '' or wef_force_reconfigure | default(false))
+      when: wef_mode == 'forwarder' and ('SUBMGR_OK' not in (wef_configured.output | default([]) | join('')) or wef_force_reconfigure | default(false))
       register: wef_forwarder_result
       changed_when: true
+
+    - name: Wait for WinRM to come back after forwarding policy restart
+      ansible.builtin.wait_for_connection:
+        delay: 20
+        timeout: 180
+      when: wef_forwarder_result is changed
 
     - name: Verify WinRM service is running
       ansible.windows.win_service:

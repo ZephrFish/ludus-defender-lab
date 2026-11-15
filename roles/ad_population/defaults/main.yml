@@ -14,8 +14,6 @@ high_value_accounts: []
 
 enable_acl_misconfigs: false
 acl_misconfigs: []
-enable_delegation_misconfigs: false
-enable_gpo_misconfigs: false
 
 # ── Account Lockout Policy ─────────────────────────────────────────────────────
 # Configures Default Domain Password Policy for realistic detection scenarios.
