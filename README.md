@@ -4,7 +4,7 @@ Ludus range config and Ansible roles for a Windows security lab pre-staged for M
 
 | Config | VMs | Purpose |
 |---|---|---|
-| `zsec-mde-mdi-lab.yml` | DC01 + WKS01 | MDE/MDI detection lab with ADCS ESC1-ESC15 |
+| `zsec-mde-mdi-lab.yml` | DC01 + WKS01 | MDE/MDI detection lab with ADCS ESC1-ESC11 and ESC13-ESC15 |
 
 ## Requirements
 
@@ -62,7 +62,7 @@ All roles live in `roles/`. The install script handles everything. Role order in
 | `mde_prereqs` | DC01, WKS01 | Defender config, audit policy, logging, LSA hardening, TLS 1.2 |
 | `wef` | DC01, WKS01 | Windows Event Forwarding (collector on DC01, forwarder on WKS01) |
 | `sysmon` | DC01, WKS01 | Sysmon install and config |
-| `adcs_lab` | DC01 | ADCS ESC1-ESC15 misconfiguration setup |
+| `adcs_lab` | DC01 | ADCS ESC1-ESC11 and ESC13-ESC15 misconfiguration setup |
 | `ad_population` | DC01 | Users, groups, OUs, Kerberoastable/ASREPRoastable accounts |
 | `smb_shares` | DC01, WKS01 | SMB shares including honeypot share |
 | `enable_mdi_gpo` | DC01 | MDI audit GPO via DefenderForIdentity module |

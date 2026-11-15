@@ -3,7 +3,7 @@
 # https://zephrsec.com | https://blog.zsec.uk
 #
 # zsec.local Lab - MDE/MDI Detection Lab with ADCS
-# 2 VMs, 10 vCPU, ~12 GB RAM
+# 2 VMs, 8 vCPU, ~12 GB RAM
 #
 # VLAN layout:
 #   30  DC01  10.X.30.10   Windows DC + ADCS CA + MDI audit GPO + WEF collector
@@ -13,8 +13,8 @@
 #   Domain lab configured for maximum logging and telemetry, pre-staged for
 #   Microsoft Defender for Endpoint (MDE) and Microsoft Defender for Identity
 #   (MDI v3 unified sensor) deployment from your Azure subscription. Includes a
-#   fully configured ADCS installation with ESC1-ESC15 misconfigurations for
-#   detection coverage testing.
+#   fully configured ADCS installation with ESC1-ESC11 and ESC13-ESC15
+#   misconfigurations for detection coverage testing.
 #
 # Logging/telemetry stack:
 #   Sysmon         - deep process, network, registry, and file telemetry on both hosts
@@ -24,7 +24,8 @@
 #   DNS logging    - DNS Server diagnostics for recon detection on DC
 #   ASR Rules      - Attack Surface Reduction pre-staged on workstation for MDE
 #
-# ADCS misconfigurations (ESC1-ESC15) are configured for detection scenario testing.
+# ADCS misconfigurations (ESC1-ESC11, ESC13-ESC15) are configured for detection
+# scenario testing. ESC12 (requires an HSM) and ESC16 are not configured.
 # MDE and MDI are NOT auto-installed - onboard MDE from security.microsoft.com,
 # then activate the MDI v3 unified sensor from the Defender portal.
 #

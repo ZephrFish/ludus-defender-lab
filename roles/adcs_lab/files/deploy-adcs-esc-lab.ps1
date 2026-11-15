@@ -1,4 +1,4 @@
-# deploy-adcs-esc-lab.ps1 - Configure ADCS for ESC1-16 Attack Paths
+# deploy-adcs-esc-lab.ps1 - Configure ADCS for ESC1-ESC11 and ESC13-ESC15 Attack Paths
 # ===================================================================
 #
 # Configures Active Directory Certificate Services on DC01 (DC+CA) for
@@ -16,7 +16,7 @@
 #   ESC9  - No Security Extension (StrongCertificateBindingEnforcement=0)
 #   ESC10 - Weak Certificate Mappings (CertificateMappingMethods includes UPN)
 #   ESC11 - IF_ENFORCEENCRYPTICERTREQUEST disabled (unencrypted RPC)
-#   ESC12 - Shell Access to CA with YubiHSM (simulated)
+#   ESC12 - Not configured (requires shell access to a CA with an HSM)
 #   ESC13 - Issuance Policy with OID Group Link
 #   ESC14 - Weak Explicit Mappings (altSecurityIdentities)
 #   ESC15 - Application Policy EKConstraint bypass
@@ -61,7 +61,7 @@ $ErrorActionPreference = "Stop"
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Cyan
-Write-Host "  ADCS ESC1-16 Attack Lab Configuration" -ForegroundColor Cyan
+Write-Host "  ADCS ESC Attack Lab Configuration" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -93,7 +93,7 @@ Write-Host ""
 
 if (-not $Force) {
     Write-Host "This script will create VULNERABLE certificate templates for training:" -ForegroundColor Yellow
-    Write-Host "  ESC1-16 attack paths will be configured" -ForegroundColor Yellow
+    Write-Host "  ESC1-ESC11 and ESC13-ESC15 attack paths will be configured" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "It will also modify CA and DC settings for ESC6-11 vulnerabilities." -ForegroundColor Yellow
     Write-Host ""
@@ -773,7 +773,7 @@ try {
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Green
-Write-Host "  ADCS ESC1-16 Lab Configuration Complete!" -ForegroundColor Green
+Write-Host "  ADCS ESC Lab Configuration Complete!" -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Green
 Write-Host ""
 

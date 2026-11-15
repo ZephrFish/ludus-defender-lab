@@ -1,9 +1,9 @@
 ---
 # Created by @ZephrFish 
 # https://zephrsec.com | https://blog.zsec.uk
-# adcs_lab - Configure ADCS for ESC1-16 attack paths
+# adcs_lab - Configure ADCS for ESC1-ESC11 and ESC13-ESC15 attack paths
 # Target: DC01
-# Attack surface: ESC1-ESC15 ADCS attack paths - see ATTACK_PLAN.md
+# Attack surface: ESC1-ESC11 and ESC13-ESC15 ADCS attack paths
 
 # =============================================================================
 # Pre-flight assertions
@@ -39,7 +39,7 @@
 - name: Deploy ADCS ESC lab
   block:
 
-    - name: Deploy ADCS ESC1-16 vulnerable templates
+    - name: Deploy ADCS ESC vulnerable templates
       ansible.windows.win_powershell:
         script: |
           Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
@@ -130,6 +130,7 @@
     type: dword
   when:
     - adcs_configure_dc_settings | default(false)
+    - adcs_enable_esc9 | default(true)
 
 - name: Configure ESC10 - CertificateMappingMethods (DC only)
   ansible.windows.win_regedit:
@@ -139,6 +140,7 @@
     type: dword
   when:
     - adcs_configure_dc_settings | default(false)
+    - adcs_enable_esc10 | default(true)
 
 - name: Configure ESC14 - Add weak altSecurityIdentities to jsmith (DC only)
   ansible.windows.win_powershell:

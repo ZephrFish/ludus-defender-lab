@@ -3,7 +3,7 @@
 # https://zephrsec.com | https://blog.zsec.uk
 # adcs_lab defaults
 # ======================
-# Configuration for ADCS ESC1-16 attack path training lab
+# Configuration for ADCS ESC1-ESC11 and ESC13-ESC15 attack path training lab
 
 # Domain for ADCS configuration
 adcs_domain: zsec.local
@@ -23,10 +23,10 @@ adcs_enable_web_enrollment: true
 adcs_configure_dc_settings: false
 
 # ESC vulnerability toggles
-# NOTE: These variables are currently informational only - the deploy-adcs-esc-lab.ps1
-# script enables all ESC paths unconditionally. To selectively enable/disable ESC paths,
-# the PowerShell script would need to accept and check these flags as parameters.
-# Future work: pass -EnableESC1 ${{ adcs_enable_esc1 }} etc. to the script.
+# Set any of these to false to skip that attack path. Most are passed to
+# deploy-adcs-esc-lab.ps1 as -SkipESCn switches. ESC9 and ESC10 are applied by
+# Ansible tasks and also require adcs_configure_dc_settings: true.
+# ESC12 (requires an HSM) and ESC16 are not configured.
 adcs_enable_esc1: true   # Enrollee supplies SAN
 adcs_enable_esc2: true   # Any Purpose / No EKU
 adcs_enable_esc3: true   # Enrollment Agent

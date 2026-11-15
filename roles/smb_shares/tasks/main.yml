@@ -149,7 +149,7 @@
       C:\Shares\IT\admin-notes.txt               -> Domain admin password hint (svc_deploy, old DA pass)
       C:\Shares\IT\scripts\deploy.ps1            -> svc_deploy / D3pl0y@utomation! in plaintext
       C:\Shares\IT\configs\server-config.xml     -> svc_sql (SqlService2026!) + svc_backup (SvcBackup2026!)
-      C:\Shares\IT\pki-docs\certificate-templates.txt -> ADCS template reference (ESC1-ESC15)
+      C:\Shares\IT\pki-docs\certificate-templates.txt -> ADCS template reference (ESC1-ESC11, ESC13-ESC15)
       C:\Shares\HR\employees.xlsx                -> Full employee directory (username + dept)
       C:\Shares\Finance\budget-2026.xlsx         -> Financial data
       C:\Shares\Backups\backup-job.ps1           -> svc_backup / SvcBackup2026! in plaintext
